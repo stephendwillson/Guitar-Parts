@@ -67,3 +67,11 @@ To use the Last.fm API, you need to have your own API keys:
 ```sh
 python guitar_parts.py
 ```
+
+### Running Tests
+
+To run tests, use `pytest` from the root directory of the project, it should discover and run all tests in the `tests` directory.
+
+```sh
+pytest
+```
