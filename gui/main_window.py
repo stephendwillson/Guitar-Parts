@@ -319,6 +319,10 @@ class SongApp(QMainWindow):
         Returns:
             QPixmap: The cached album art pixmap.
         """
+        if not album_name:
+            logging.info("No album name provided, skipping album art fetch.")
+            return None
+
         album_art_path = os.path.join(self.cache_dir, f"{album_name}.jpg")
         return album_art_path if os.path.exists(album_art_path) else None
 
@@ -455,7 +459,7 @@ class SongApp(QMainWindow):
                 f.write(response.content)
             return album_art_path
         except requests.exceptions.RequestException as e:
-            logging.error("Error fetching album art: %s", e)
+            logging.warning("Error fetching album art: %s", e)
             return None
 
 
