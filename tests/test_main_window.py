@@ -99,6 +99,12 @@ def test_create_cache_directory(mock_makedirs, mock_exists, song_app):
     """
     mock_exists.return_value = False
     song_app.create_cache_directory()
-    mock_makedirs.assert_called_once_with(
-        os.path.expanduser("~/.cache/album_art"), exist_ok=True
+    expected_cache_dir = os.path.join(
+        os.path.expanduser("~/.guitar_parts"), "album_art_cache"
     )
+    expected_parent_dir = os.path.dirname(expected_cache_dir)
+
+    # Check that both the parent directory and the cache directory are created
+    mock_makedirs.assert_any_call(expected_parent_dir, exist_ok=True)
+    mock_makedirs.assert_any_call(expected_cache_dir, exist_ok=True)
+    assert mock_makedirs.call_count == 2

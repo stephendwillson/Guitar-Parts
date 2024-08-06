@@ -35,6 +35,7 @@ from db.db import (
     delete_song,
     update_song_info,
     song_exists,
+    get_default_db_path,
 )
 from api.lastfm_api import get_track_info
 from models.song import Song
@@ -330,8 +331,10 @@ class SongApp(QMainWindow):
         """
         Create the cache directory for storing album art.
         """
-        self.cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "album_art")
-        os.makedirs(self.cache_dir, exist_ok=True)
+        db_path = get_default_db_path()
+        cache_dir = os.path.join(os.path.dirname(db_path), "album_art_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        self.cache_dir = cache_dir
 
     def save_song(self):
         """

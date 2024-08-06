@@ -46,5 +46,7 @@ if __name__ == "__main__":
     if os.getenv("ALLOW_DB_RESET") == "true":
         reset_database()
     else:
-        print("Database reset is not allowed. Set ALLOW_DB_RESET environment variable "
-              "to 'true' to enable.")
+        print(
+            "Database reset is not allowed. Set ALLOW_DB_RESET environment variable "
+            "to 'true' to enable."
+        )
