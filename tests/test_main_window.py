@@ -14,9 +14,11 @@ def song_app():
     """
     Fixture to init the SongApp.
     """
-    app = SongApp()
-    yield app
-    app.conn.close()
+    with patch("db.db.initialize_db") as mock_initialize_db:
+        mock_initialize_db.return_value = (MagicMock(), MagicMock())
+        app = SongApp()
+        yield app
+        app.conn.close()
 
 
 def test_initialization(song_app):

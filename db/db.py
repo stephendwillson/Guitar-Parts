@@ -3,10 +3,44 @@ Module for database stuffs.
 """
 
 import sqlite3
+import os
+import sys
 from models.song import Song
 
 
-def initialize_db(db_file="data/songs.db", schema_file="db/schema.sql"):
+def get_resource_path(relative_path):
+    """
+    Get the absolute path to a resource file.
+
+    Args:
+        relative_path (str): The relative path to the resource.
+
+    Returns:
+        str: The absolute path to the resource.
+    """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
+def get_default_db_path():
+    """
+    Get the default path for the database file.
+
+    Returns:
+        str: The default path to the database file.
+    """
+    home_dir = os.path.expanduser("~")
+    db_dir = os.path.join(home_dir, ".guitar_parts")
+    os.makedirs(db_dir, exist_ok=True)
+    return os.path.join(db_dir, "songs.db")
+
+
+def initialize_db(db_file=None, schema_file="db/schema.sql"):
     """
     Init database by connecting to it and creating the schema.
 
@@ -17,10 +51,14 @@ def initialize_db(db_file="data/songs.db", schema_file="db/schema.sql"):
     Returns:
         tuple: Tuple containing the database connection and cursor.
     """
+    if db_file is None:
+        db_file = get_default_db_path()
+
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
 
-    with open(schema_file, "r", encoding="utf-8") as f:
+    schema_path = get_resource_path(schema_file)
+    with open(schema_path, "r", encoding="utf-8") as f:
         schema = f.read()
 
     cursor.executescript(schema)
