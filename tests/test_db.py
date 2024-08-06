@@ -1,7 +1,7 @@
 import pytest
-import sqlite3
 
 from db.db import (
+    initialize_db,
     save_song,
     load_songs,
     delete_song,
@@ -13,23 +13,8 @@ from models.song import Song
 
 @pytest.fixture
 def db_cursor():
-    # Create an in-memory SQLite database and init
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-    schema = """
-    CREATE TABLE IF NOT EXISTS songs (
-        id INTEGER PRIMARY KEY,
-        title TEXT NOT NULL,
-        artist TEXT NOT NULL,
-        tuning TEXT,
-        notes TEXT,
-        album TEXT,
-        duration TEXT,
-        genres TEXT
-    );
-    """
-    cursor.executescript(schema)
-    conn.commit()
+    # Init in-memory database
+    conn, cursor = initialize_db(":memory:", "db/schema.sql")
     yield cursor
 
     # Close the database connection
