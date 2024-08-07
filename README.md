@@ -7,6 +7,9 @@ The app uses the Last.fm API to fetch song details based on the title and artist
 
 
 ## Requirements
+
+**Note**: This application has been tested on Fedora Linux. It should work on other Linux distros and platforms but these platforms have not been explicitly tested.
+
 ### Python
 Ensure Python (3.6 or higher) is installed. It can be downloaded from [python.org](https://www.python.org/downloads/).
 
@@ -22,11 +25,11 @@ Ensure Python (3.6 or higher) is installed. It can be downloaded from [python.or
    ```
 
 #### Linux
-1. Most Linux distributions come with Python pre-installed. If Python is not installed, it can be installed using the package manager. For example, on Debian-based systems:
-   ```sh
-   sudo apt-get update
-   sudo apt-get install python3
-   ```
+Most Linux distributions come with Python pre-installed. If Python is not installed, it can be installed using the package manager. For example, on Debian-based systems:
+```sh
+sudo apt-get update
+sudo apt-get install python3
+```
 
 ### Virtual Environment
 It's recommended to use a virtual environment for dependency management. From project root directory:
@@ -47,21 +50,18 @@ pip install pytest pytest-qt PyQt6 titlecase requests python-dotenv
 ```
 
 ### Last.fm API Keys
-To use the Last.fm API, you need to have your own API keys:
+To use the Last.fm API, you need to obtain your own API keys. Sign up for an account and get your API key and secret from [Last.fm API](https://www.last.fm/api).
 
-1. Sign up for a Last.fm API account and get your API key and secret from [Last.fm API](https://www.last.fm/api).
-2. Create a file named `.env` in the root directory of your project.
-3. Add the following lines to `.env` and replace the placeholders with actual API key and secret:
-   ```
-   API_KEY=your_key_here
-   API_SECRET=your_secret_here
-   ```
+Set the following environment variables with your API key and secret:
+```
+API_KEY=your_key_here
+API_SECRET=your_secret_here
+```
 
-   Note if you run a different shell like Fish, change the env var syntax as needed:
-      ```
-      set -x API_KEY 'your_key_here'
-      set -x API_SECRET 'your_secret_here'
-      ```
+You can set these variables manually or by creating a `.env` file in the root directory of your project with the above lines. Before running or developing, load the environment variables:
+```sh
+source .env
+```
 
 ## Run Application
 ```sh
@@ -70,8 +70,7 @@ python guitar_parts.py
 
 ### Running Tests
 
-To run tests, use `pytest` from the root directory of the project, it should discover and run all tests in the `tests` directory.
-
+To run tests, use `pytest` from the root directory of the project. It should discover and run all tests in the `tests` directory.
 ```sh
 pytest
 ```
