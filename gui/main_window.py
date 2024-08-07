@@ -128,13 +128,27 @@ class SongApp(QMainWindow):
         self.search_entry.textChanged.connect(self.update_song_list)
         self.main_layout.addWidget(self.search_entry)
 
+        # Artist input
         self.artist_entry = QLineEdit()
-        self.artist_entry.setPlaceholderText("Artist")
+        self.artist_entry.setPlaceholderText("Artist *")
         self.main_layout.addWidget(self.artist_entry)
 
+        # Inline error message for artist
+        self.artist_error_label = QLabel()
+        self.artist_error_label.setStyleSheet("color: red")
+        self.artist_error_label.setVisible(False)
+        self.main_layout.addWidget(self.artist_error_label)
+
+        # Title input
         self.title_entry = QLineEdit()
-        self.title_entry.setPlaceholderText("Song Title")
+        self.title_entry.setPlaceholderText("Song Title *")
         self.main_layout.addWidget(self.title_entry)
+
+        # Inline error message for title
+        self.title_error_label = QLabel()
+        self.title_error_label.setStyleSheet("color: red")
+        self.title_error_label.setVisible(False)
+        self.main_layout.addWidget(self.title_error_label)
 
         self.tuning_entry = QLineEdit()
         self.tuning_entry.setPlaceholderText("Tuning")
@@ -222,6 +236,13 @@ class SongApp(QMainWindow):
             item (QTreeWidgetItem): The clicked tree view item.
         """
         logging.debug("Treeview item clicked: %s", item.text(0))
+
+        # Clear and hide error messages
+        self.title_error_label.clear()
+        self.artist_error_label.clear()
+        self.title_error_label.setVisible(False)
+        self.artist_error_label.setVisible(False)
+
         if self.last_selected_item == item:
             self.song_tree.setCurrentItem(None)
             self.clear_inputs()
@@ -354,10 +375,19 @@ class SongApp(QMainWindow):
         tuning = self.tuning_entry.text()
         notes = self.notes_entry.toPlainText()
 
+        # Clear previous error messages
+        self.title_error_label.clear()
+        self.artist_error_label.clear()
+        self.title_error_label.setVisible(False)
+        self.artist_error_label.setVisible(False)
+
         if not title or not artist:
-            QMessageBox.warning(
-                self, "Input Error", "Title and Artist are required fields."
-            )
+            if not title:
+                self.title_error_label.setText("Title is required.")
+                self.title_error_label.setVisible(True)
+            if not artist:
+                self.artist_error_label.setText("Artist is required.")
+                self.artist_error_label.setVisible(True)
             return
 
         logging.debug("Saving song: %s by %s", title, artist)
@@ -374,7 +404,7 @@ class SongApp(QMainWindow):
             song.notes = notes
             song.tuning = tuning
             update_song_info(self.cursor, song)
-            QMessageBox.information(self, "Success", "Song updated successfully.")
+            self.show_status_message(f"{title} updated successfully.")
             self.show_status_message(f"Updated {title}.", 5000)
             logging.debug("Song updated successfully")
         else:
