@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 
 
 from PyQt6.QtWidgets import QHeaderView
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
 from titlecase import titlecase
 
@@ -179,6 +179,15 @@ class SongApp(QMainWindow):
         self.main_layout.addLayout(self.metadata_album_layout)
 
         self.update_song_list()
+
+        # Status bar
+        self.status_bar = self.statusBar()
+        self.status_label = QLabel()
+        self.status_bar.addWidget(self.status_label)
+
+    def show_status_message(self, message, duration=5000):
+        self.status_label.setText(message)
+        QTimer.singleShot(duration, lambda: self.status_label.clear())
 
     def update_song_list(self):
         """
@@ -352,12 +361,13 @@ class SongApp(QMainWindow):
             return
 
         logging.debug("Saving song: %s by %s", title, artist)
+        self.show_status_message(f"Saving {title}...", 5000)
 
         # Handle updating if song exists, or add to db if song is new
         if self.last_selected_item:
             song = self.last_selected_item.data(0, 1)
             if song.notes == notes and song.tuning == tuning:
-                QMessageBox.information(self, "No Changes", "No changes detected.")
+                self.show_status_message(f"No changes detected for {title}.", 5000)
                 logging.debug("No changes detected for the song")
                 return
 
@@ -365,6 +375,7 @@ class SongApp(QMainWindow):
             song.tuning = tuning
             update_song_info(self.cursor, song)
             QMessageBox.information(self, "Success", "Song updated successfully.")
+            self.show_status_message(f"Updated {title}.", 5000)
             logging.debug("Song updated successfully")
         else:
             if song_exists(self.cursor, title, artist):
@@ -398,7 +409,7 @@ class SongApp(QMainWindow):
             )
 
             save_song(self.cursor, song)
-            QMessageBox.information(self, "Success", "Song saved successfully.")
+            self.show_status_message(f"Saved {title} to {get_default_db_path()}.", 5000)
             logging.debug("Song saved successfully")
 
         self.update_song_list()
@@ -410,14 +421,29 @@ class SongApp(QMainWindow):
         """
         selected_item = self.song_tree.currentItem()
         if selected_item:
-            song = selected_item.data(0, 1)
-            logging.debug("Deleting song %s by %s", song.title, song.artist)
+            reply = QMessageBox.question(
+                self,
+                "Confirm Deletion",
+                (
+                    f"Are you sure you want to delete {selected_item.text(1)} "
+                    f"by {selected_item.text(0)}?"
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
 
-            delete_song(self.cursor, song.title, song.artist)
-            self.update_song_list()
-            self.clear_inputs()
-            logging.debug("Song deleted successfully")
+            if reply == QMessageBox.StandardButton.Yes:
+                song = selected_item.data(0, 1)
+                logging.debug("Deleting song %s by %s", song.title, song.artist)
+
+                delete_song(self.cursor, song.title, song.artist)
+                self.show_status_message(f"Deleted {selected_item.text(1)}.", 5000)
+
+                self.update_song_list()
+                self.clear_inputs()
+                logging.debug("Song deleted successfully")
         else:
+            self.show_status_message("No song is selected to delete!", 5000)
             logging.warning("No song selected for deletion")
 
     def clear_inputs(self):
