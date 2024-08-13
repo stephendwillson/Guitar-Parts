@@ -1,6 +1,11 @@
+import sys
+import os
 import pytest
 
-from db.db import (
+# Make sure project root dir is in PYTHONPATH
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from services.db import (  # noqa: E402 - Import not at top of file
     initialize_db,
     save_song,
     load_songs,
@@ -8,21 +13,24 @@ from db.db import (
     update_song_info,
     song_exists,
 )
-from models.song import Song
+from models.song import Song  # noqa: E402 - Import not at top of file
 
 
 @pytest.fixture
 def db_cursor():
-    # Init in-memory database
+    """
+    Fixture to initialize the database and provide a cursor.
+    """
     conn, cursor = initialize_db(":memory:", "db/schema.sql")
     yield cursor
 
-    # Close the database connection
     conn.close()
 
 
 def test_initialize_db(db_cursor):
-    # Test if the database schema is created correctly
+    """
+    Test if the database schema is created correctly.
+    """
     db_cursor.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='songs';"
     )
@@ -30,7 +38,9 @@ def test_initialize_db(db_cursor):
 
 
 def test_save_song(db_cursor):
-    # Test saving a song to the database
+    """
+    Test saving a song to the database.
+    """
     song = Song(
         title="Test Song",
         artist="Test Artist",
@@ -49,7 +59,9 @@ def test_save_song(db_cursor):
 
 
 def test_load_songs(db_cursor):
-    # Test loading songs from the database
+    """
+    Test loading songs from the database.
+    """
     song = Song(
         title="Test Song",
         artist="Test Artist",
@@ -67,7 +79,9 @@ def test_load_songs(db_cursor):
 
 
 def test_delete_song(db_cursor):
-    # Test deleting a song from the database
+    """
+    Test deleting a song from the database.
+    """
     song = Song(
         title="Test Song",
         artist="Test Artist",
@@ -87,7 +101,9 @@ def test_delete_song(db_cursor):
 
 
 def test_update_song_info(db_cursor):
-    # Test updating song data in the database
+    """
+    Test updating song data in the database.
+    """
     song = Song(
         title="Test Song",
         artist="Test Artist",
@@ -108,7 +124,9 @@ def test_update_song_info(db_cursor):
 
 
 def test_song_exists(db_cursor):
-    # Test checking if a song exists in the database
+    """
+    Test if a song exists in the database.
+    """
     song = Song(
         title="Test Song",
         artist="Test Artist",
@@ -119,7 +137,5 @@ def test_song_exists(db_cursor):
         genres=["Rock"],
     )
     save_song(db_cursor, song)
-    exists = song_exists(db_cursor, "Test Song", "Test Artist")
-    assert exists is True
-    not_exists = song_exists(db_cursor, "Bogus Song", "Bunk Artist")
-    assert not_exists is False
+    assert song_exists(db_cursor, "Test Song", "Test Artist")
+    assert not song_exists(db_cursor, "Bogus Song", "Bunk Artist")
