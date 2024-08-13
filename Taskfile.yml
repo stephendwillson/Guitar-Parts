@@ -1,0 +1,15 @@
+# https://taskfile.dev
+# This is for Taskfile tool ('task').
+# Used in this project with the VSCode extension "Run Task"
+
+version: '3'
+
+tasks:
+  run_tests_and_generate_coverage:
+    cmds:
+      - coverage run -m pytest
+      - coverage lcov
+    env:
+      VIRTUAL_ENV: '{{.PWD}}/venv'
+      PATH: '{{.PWD}}/venv/bin:{{.ENV.PATH}}'
+    desc: "Run Tests and Generate Coverage"
