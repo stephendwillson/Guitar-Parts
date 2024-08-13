@@ -4,7 +4,7 @@ Entry point for application
 
 import sys
 from PyQt6.QtWidgets import QApplication
-from gui.main_window import SongApp
+from views.main_window import SongApp
 
 
 def main():

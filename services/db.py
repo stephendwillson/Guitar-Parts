@@ -3,46 +3,16 @@ Module for database stuffs.
 """
 
 import sqlite3
-import os
-import sys
+import logging
 from models.song import Song
+from utils.utils import get_default_db_path, get_resource_path, setup_logging
 
-
-def get_resource_path(relative_path):
-    """
-    Get the absolute path to a resource file.
-
-    Args:
-        relative_path (str): The relative path to the resource.
-
-    Returns:
-        str: The absolute path to the resource.
-    """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except AttributeError:
-        base_path = os.path.abspath(".")
-
-    return os.path.join(base_path, relative_path)
-
-
-def get_default_db_path():
-    """
-    Get the default path for the database file.
-
-    Returns:
-        str: The default path to the database file.
-    """
-    home_dir = os.path.expanduser("~")
-    db_dir = os.path.join(home_dir, ".guitar_parts")
-    os.makedirs(db_dir, exist_ok=True)
-    return os.path.join(db_dir, "songs.db")
+setup_logging()
 
 
 def initialize_db(db_file=None, schema_file="db/schema.sql"):
     """
-    Init database by connecting to it and creating the schema.
+    Init database.
 
     Args:
         db_file (str): Path to the database file.
@@ -64,6 +34,40 @@ def initialize_db(db_file=None, schema_file="db/schema.sql"):
     cursor.executescript(schema)
     conn.commit()
     return conn, cursor
+
+
+def get_song(cursor, title, artist):
+    """
+    Get a song from the database.
+
+    Args:
+        cursor (sqlite3.Cursor): The database cursor.
+        title (str): The title of the song.
+        artist (str): The artist of the song.
+
+    Returns:
+        Song: The song object if found, None otherwise.
+    """
+    logging.debug("Fetching song: %s by %s", title, artist)
+    cursor.execute(
+        "SELECT title, artist, tuning, notes, album, duration, genres FROM songs "
+        "WHERE LOWER(title) = LOWER(?) AND LOWER(artist) = LOWER(?)",
+        (title.lower(), artist.lower()),
+    )
+    row = cursor.fetchone()
+    if row:
+        logging.debug("Song found: %s by %s", row[0], row[1])
+        return Song(
+            title=row[0],
+            artist=row[1],
+            tuning=row[2],
+            notes=row[3],
+            album=row[4],
+            duration=row[5],
+            genres=row[6].split(", "),  # Convert genres back to a list
+        )
+    logging.debug("Song not found: %s by %s", title, artist)
+    return None
 
 
 def save_song(cursor, song):
