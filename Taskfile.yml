@@ -7,8 +7,8 @@ version: '3'
 tasks:
   run_tests_and_generate_coverage:
     cmds:
-      - coverage run -m pytest
-      - coverage lcov
+      - . venv/bin/activate && coverage run -m pytest
+      - . venv/bin/activate && coverage html
     env:
       VIRTUAL_ENV: '{{.PWD}}/venv'
       PATH: '{{.PWD}}/venv/bin:{{.ENV.PATH}}'
