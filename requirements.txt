@@ -28,6 +28,7 @@ extractcode-7z==16.5.210531
 extractcode-libarchive==3.5.1.210531
 fasteners==0.19
 fingerprints==1.2.3
+flake8==7.1.1
 ftfy==6.2.0
 gemfileparser2==0.9.3
 html5lib==1.1
@@ -63,7 +64,9 @@ plugincode==32.0.0
 ply==3.11
 publicsuffix2==2.20191221
 pyahocorasick==2.1.0
+pycodestyle==2.12.1
 pycparser==2.22
+pyflakes==3.2.0
 pygmars==0.8.0
 Pygments==2.18.0
 pyinstaller==6.9.0
