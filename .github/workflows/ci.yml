@@ -12,27 +12,52 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      API_KEY: ${{ secrets.API_KEY }}
+      API_SECRET: ${{ secrets.API_SECRET }}
+      DISPLAY: ":99.0"
+      QT_SELECT: "qt6"
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12.4'
 
-    - name: Set environment variables
-      run: |
-        echo "API_KEY=${{ secrets.API_KEY }}" >> $GITHUB_ENV
-        echo "API_SECRET=${{ secrets.API_SECRET }}" >> $GITHUB_ENV
-
     - name: Install dependencies
+      if: runner.os == 'Linux'
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libegl1-mesa
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq apt-utils
+
+        # These may not all be necessary. The packages were identified from a StackOverflow post:
+        # https://stackoverflow.com/questions/60692711/cant-create-python-qapplication-in-github-action/77480795#77480795
+        sudo apt-get install -y -qq xvfb x11-utils libxkbcommon-x11-0 libxkbcommon-dev libxkbcommon-x11-dev libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 libxcb-shape0 libglib2.0-0 
+        sudo apt-get install -y -qq '^libxcb.*-dev' libx11-xcb-dev libgl1-mesa-dev libegl1-mesa libglu1-mesa-dev libxrender-dev libxi-dev 
+
+    - name: Setup Xvfb
+      if: runner.os == 'Linux'
+      run: |
+        sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
+        sleep 3
+
+    - name: Install Python dependencies
+      run: |
+        # python -m pip install --upgrade pip wheel
+        # python -m pip install coverage flake8 pytest pytest-qt
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
     - name: Run tests with coverage
       run: |
-        pytest --cov=.
+        xvfb-run -a --server-args="-screen 0 1280x1024x24" coverage run -m pytest
+        coverage html
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: htmlcov

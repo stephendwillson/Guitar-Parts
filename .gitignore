@@ -167,6 +167,7 @@ cython_debug/
 
 # Project specific
 *.db
+bin/
 
 # VSCode
 .vscode/
