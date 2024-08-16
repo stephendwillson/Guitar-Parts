@@ -11,6 +11,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
 
     env:
       API_KEY: ${{ secrets.API_KEY }}
@@ -54,10 +57,9 @@ jobs:
     - name: Run tests with coverage
       run: |
         xvfb-run -a --server-args="-screen 0 1280x1024x24" coverage run -m pytest
-        coverage html
 
-    - name: Upload coverage report
-      uses: actions/upload-artifact@v3
+
+    - name: Coverage comment
+      uses: py-cov-action/python-coverage-comment-action@v3
       with:
-        name: coverage-report
-        path: htmlcov
+        GITHUB_TOKEN: ${{ github.token }}
