@@ -174,4 +174,3 @@ bin/
 
 # Linting
 .pylintrc
-.flake8
