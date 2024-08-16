@@ -1,4 +1,7 @@
 # Guitar Parts
+
+![Coverage Badge](https://raw.githubusercontent.com/stephendwillson/Guitar-Parts/python-coverage-comment-action-data/badge.svg)
+
 Developed for personal use but might be useful to others with the same problem.
 
 I play guitar and try to learn as many songs as I can but I often forget which songs I've learned or which parts of songs I've learned. This is meant to be a place where I can store the songs I've learned and leave a note on which parts I've learned, the song structure, the chord progressions, or anything that might help me remember the part. The goal is to be able to randomly pick a few tracks to practice to keep fingers and brain fresh.

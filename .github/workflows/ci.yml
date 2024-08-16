@@ -22,15 +22,15 @@ jobs:
       QT_SELECT: "qt6"
 
     steps:
-    - name: Checkout code
+    - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Set up Python Environment
       uses: actions/setup-python@v5
       with:
         python-version: '3.12.4'
 
-    - name: Install dependencies
+    - name: Install System Dependencies
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update -qq
@@ -38,28 +38,51 @@ jobs:
 
         # These may not all be necessary. The packages were identified from a StackOverflow post:
         # https://stackoverflow.com/questions/60692711/cant-create-python-qapplication-in-github-action/77480795#77480795
-        sudo apt-get install -y -qq xvfb x11-utils libxkbcommon-x11-0 libxkbcommon-dev libxkbcommon-x11-dev libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 libxcb-shape0 libglib2.0-0 
-        sudo apt-get install -y -qq '^libxcb.*-dev' libx11-xcb-dev libgl1-mesa-dev libegl1-mesa libglu1-mesa-dev libxrender-dev libxi-dev 
 
-    - name: Setup Xvfb
-      if: runner.os == 'Linux'
-      run: |
-        sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
-        sleep 3
+        # Xvfb and X11 utils
+        sudo apt-get install -y -qq xvfb x11-utils
 
-    - name: Install Python dependencies
+        # libxkbcommon libraries
+        sudo apt-get install -y -qq libxkbcommon-x11-0 libxkbcommon-dev \
+          libxkbcommon-x11-dev
+
+        # libxcb libraries
+        sudo apt-get install -y -qq libxcb-icccm4 libxcb-image0 \
+          libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 \
+          libxcb-xinput0 libxcb-xfixes0 libxcb-shape0 '^libxcb.*-dev' \
+          libx11-xcb-dev
+
+        # Mesa and rendering libraries
+        sudo apt-get install -y -qq libgl1-mesa-dev libegl1-mesa \
+          libglu1-mesa-dev libxrender-dev
+
+        # Other dependencies
+        sudo apt-get install -y -qq libxi-dev libglib2.0-0
+
+
+
+        # sudo apt-get install -y -qq xvfb x11-utils libxkbcommon-x11-0 libxkbcommon-dev libxkbcommon-x11-dev libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 libxcb-shape0 libglib2.0-0 
+        # sudo apt-get install -y -qq '^libxcb.*-dev' libx11-xcb-dev libgl1-mesa-dev libegl1-mesa libglu1-mesa-dev libxrender-dev libxi-dev 
+
+    - name: Install Python Dependencies
       run: |
-        # python -m pip install --upgrade pip wheel
-        # python -m pip install coverage flake8 pytest pytest-qt
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run tests with coverage
+    - name: Lint Python Code
+      run: flake8 . --config=.flake8
+
+    - name: Setup Xvfb (Virtual Framebuffer)
+      if: runner.os == 'Linux'
+      run: |
+        sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
+        sleep 3 # Give xvf time to start
+
+    - name: Run Tests with Coverage
       run: |
         xvfb-run -a --server-args="-screen 0 1280x1024x24" coverage run -m pytest
 
-
-    - name: Coverage comment
+    - name: Post Coverage Comment
       uses: py-cov-action/python-coverage-comment-action@v3
       with:
         GITHUB_TOKEN: ${{ github.token }}
