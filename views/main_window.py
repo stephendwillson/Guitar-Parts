@@ -19,8 +19,9 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QApplication,
     QTreeWidgetItem,
-    QMessageBox,
     QHeaderView,
+    QDialog,
+    QDialogButtonBox,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
@@ -95,52 +96,31 @@ class SongApp(QMainWindow):
 
         # Buttons
         self.button_layout = QHBoxLayout()
-        self.save_button = QPushButton("Save Song")
-        self.save_button.clicked.connect(self.save_song)
-        self.button_layout.addWidget(self.save_button)
+
+        self.add_song_button = QPushButton("Add Song")
+        self.add_song_button.clicked.connect(self.add_song)
+        self.button_layout.addWidget(self.add_song_button)
 
         self.delete_button = QPushButton("Delete Song")
         self.delete_button.clicked.connect(self.delete_song)
         self.button_layout.addWidget(self.delete_button)
 
+        self.edit_button = QPushButton("Edit Song")
+        self.edit_button.clicked.connect(self.edit_song)
+        self.button_layout.addWidget(self.edit_button)
+
+        self.select_songs_button = QPushButton("Select Songs...")
+        self.select_songs_button.clicked.connect(self.select_songs)
+        self.button_layout.addWidget(self.select_songs_button)
+
         # Add button layout to main layout
         self.main_layout.addLayout(self.button_layout)
 
-        # Text input boxes
+        # Search input
         self.search_entry = QLineEdit()
         self.search_entry.setPlaceholderText("Search by Title or Artist")
         self.search_entry.textChanged.connect(self.update_song_list)
         self.main_layout.addWidget(self.search_entry)
-
-        # Artist input
-        self.artist_entry = QLineEdit()
-        self.artist_entry.setPlaceholderText("Artist *")
-        self.main_layout.addWidget(self.artist_entry)
-
-        # Inline error message for artist
-        self.artist_error_label = QLabel()
-        self.artist_error_label.setStyleSheet("color: red")
-        self.artist_error_label.setVisible(False)
-        self.main_layout.addWidget(self.artist_error_label)
-
-        # Title input
-        self.title_entry = QLineEdit()
-        self.title_entry.setPlaceholderText("Song Title *")
-        self.main_layout.addWidget(self.title_entry)
-
-        # Inline error message for title
-        self.title_error_label = QLabel()
-        self.title_error_label.setStyleSheet("color: red")
-        self.title_error_label.setVisible(False)
-        self.main_layout.addWidget(self.title_error_label)
-
-        self.tuning_entry = QLineEdit()
-        self.tuning_entry.setPlaceholderText("Tuning")
-        self.main_layout.addWidget(self.tuning_entry)
-
-        self.notes_entry = QTextEdit()
-        self.notes_entry.setPlaceholderText("Notes")
-        self.main_layout.addWidget(self.notes_entry)
 
         # Metadata display
         self.scroll_area = QScrollArea()
@@ -195,15 +175,8 @@ class SongApp(QMainWindow):
         title = item.text(1)
         logging.debug("Treeview item clicked: %s by %s", title, artist)
 
-        # Clear previous error messages
-        self.title_error_label.clear()
-        self.artist_error_label.clear()
-        self.title_error_label.setVisible(False)
-        self.artist_error_label.setVisible(False)
-
         if self.last_selected_item == item:
             self.song_tree.setCurrentItem(None)
-            self.clear_inputs()
             self.clear_song_display_info()
             self.last_selected_item = None
             logging.debug("Deselected item")
@@ -215,11 +188,21 @@ class SongApp(QMainWindow):
                 logging.debug("Selected song: %s by %s", song.title, song.artist)
             else:
                 logging.error("Song not found: %s by %s", title, artist)
-                QMessageBox.warning(
-                    self, "Error", f"Song not found: {title} by {artist}"
+                self.show_status_message(
+                    f"Song not found: {title} by {artist}", error=True
                 )
 
     def select_song_in_tree(self, title, artist):
+        """
+        Select a specific song in the tree view.
+
+        This method searches for a song with the given title and artist
+        in the song tree and selects it if found.
+
+        Args:
+            title (str): The title of the song to select.
+            artist (str): The artist of the song to select.
+        """
         for i in range(self.song_tree.topLevelItemCount()):
             item = self.song_tree.topLevelItem(i)
             if item.text(0) == artist and item.text(1) == title:
@@ -242,11 +225,6 @@ class SongApp(QMainWindow):
     def display_song_info(self, song):
         logging.debug("Displaying song info: %s by %s", song.title, song.artist)
 
-        self.title_entry.setText(song.title)
-        self.artist_entry.setText(song.artist)
-        self.tuning_entry.setText(song.tuning)
-        self.notes_entry.setText(song.notes)
-
         self.artist_label.setText(f"Artist: {titlecase(song.artist)}")
         self.title_label.setText(f"Title: {titlecase(song.title)}")
         self.album_label.setText(f"Album: {song.album}")
@@ -259,12 +237,9 @@ class SongApp(QMainWindow):
             formatted_duration = "N/A"
         self.duration_label.setText(f"Duration: {formatted_duration}")
 
-        # Pretty up the list of genres, ie ['pop', 'rock'] -> pop, rock
-        genres_display = "".join(song.genres).replace(",", ", ").rstrip(", ")
         self.genres_label.setText(
             f"Genres: {', '.join(song.genres) if song.genres else 'N/A'}"
         )
-
         self.tuning_label.setText(f"Tuning: {song.tuning}")
         self.notes_label.setText(f"Notes: {song.notes}")
 
@@ -274,8 +249,8 @@ class SongApp(QMainWindow):
             song.title,
             song.artist,
             song.album,
-            song.duration,
-            genres_display,
+            formatted_duration,
+            ", ".join(song.genres) if song.genres else "N/A",
             song.tuning,
             song.notes,
         )
@@ -291,48 +266,11 @@ class SongApp(QMainWindow):
                 )
             )
         else:
-            logging.debug(
-                "No cached album art found for %s, downloading...", song.album
+            logging.debug("No album art found for %s", song.album)
+            self.album_art_label.setText("No album art available")
+            self.album_art_label.setStyleSheet(
+                "background-color: #f0f0f0; color: #888888;"
             )
-            track_info = self.controller.get_track_info(song.artist, song.title)
-            album_art_url = track_info.get("album_art_url")
-            if album_art_url:
-                album_art_path = self.controller.fetch_and_cache_album_art(
-                    album_art_url, song.album
-                )
-                if album_art_path:
-                    logging.debug(
-                        "Downloaded and cached album art to %s", album_art_path
-                    )
-                    pixmap = QPixmap(album_art_path)
-                    self.album_art_label.setPixmap(
-                        pixmap.scaled(
-                            self.album_art_label.size(),
-                            Qt.AspectRatioMode.KeepAspectRatio,
-                        )
-                    )
-                else:
-                    logging.error("Failed to download album art.")
-                    self.album_art_label.clear()
-            else:
-                logging.error("No album art URL found.")
-                self.album_art_label.clear()
-
-    def clear_inputs(self):
-        """
-        Clear the input fields.
-        """
-        logging.debug("Clearing input fields")
-
-        self.title_entry.clear()
-        self.artist_entry.clear()
-        self.tuning_entry.clear()
-        self.notes_entry.clear()
-        self.title_entry.setReadOnly(False)
-        self.artist_entry.setReadOnly(False)
-        self.last_selected_item = None
-
-        logging.debug("Input fields cleared")
 
     def clear_song_display_info(self):
         """
@@ -351,96 +289,198 @@ class SongApp(QMainWindow):
 
         logging.debug("Song display info cleared")
 
-    def show_status_message(self, message, duration=5000):
+    def show_status_message(self, message, error=False, duration=5000):
         self.status_label.setText(message)
-        QTimer.singleShot(duration, lambda: self.status_label.clear())
-
-    def save_song(self):
-        """
-        Save the current song to the database.
-        """
-        title = titlecase(self.title_entry.text())
-        artist = titlecase(self.artist_entry.text())
-        tuning = self.tuning_entry.text()
-        notes = self.notes_entry.toPlainText()
-
-        # Clear previous error messages
-        self.title_error_label.clear()
-        self.artist_error_label.clear()
-        self.title_error_label.setVisible(False)
-        self.artist_error_label.setVisible(False)
-
-        if not title or not artist:
-            if not title:
-                self.title_error_label.setText("Title is required.")
-                self.title_error_label.setVisible(True)
-            if not artist:
-                self.artist_error_label.setText("Artist is required.")
-                self.artist_error_label.setVisible(True)
-            return
-
-        logging.debug("Saving song: %s by %s", title, artist)
-        self.show_status_message(f"Saving {title}...", 5000)
-
-        # Handle updating if song exists, or add to db if song is new
-        if self.last_selected_item:
-            song = self.controller.get_song(title, artist)
-
-            # If a song is 'selected' this should never fire
-            if song is None:
-                logging.error("Song not found in the database: %s by %s", title, artist)
-                return
-
-            if song.notes == notes and song.tuning == tuning:
-                self.show_status_message(f"No changes detected for {title}.", 5000)
-                logging.debug("No changes detected for the song")
-                return
-
-            song.notes = notes
-            song.tuning = tuning
-            self.controller.update_song_info(song)
-            self.show_status_message(f"{title} updated successfully.", 5000)
-            logging.debug("Song updated successfully")
+        if error:
+            self.status_label.setStyleSheet("color: red;")
         else:
-            if self.controller.song_exists(title, artist):
-                QMessageBox.warning(
-                    self, "Duplicate Song", "This song already exists in the database."
-                )
-                logging.debug("Song already exists in the database")
+            self.status_label.setStyleSheet("color: black;")
+        logging.info(f"Status message: {message}")
+
+        # Set a timer to clear the message after the specified duration
+        QTimer.singleShot(duration, self.status_label.clear)
+
+    def add_song(self):
+        """
+        Prompt user for new song details and add to database.
+        """
+        logging.debug("Opening add song dialog")
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Add Song")
+        layout = QVBoxLayout(dialog)
+
+        artist_input = QLineEdit(dialog)
+        artist_input.setPlaceholderText("Artist (required)")
+        layout.addWidget(artist_input)
+
+        title_input = QLineEdit(dialog)
+        title_input.setPlaceholderText("Title (required)")
+        layout.addWidget(title_input)
+
+        notes_input = QTextEdit(dialog)
+        notes_input.setPlaceholderText("Notes (optional)")
+        layout.addWidget(notes_input)
+
+        tuning_input = QLineEdit(dialog)
+        tuning_input.setPlaceholderText("Tuning (optional)")
+        layout.addWidget(tuning_input)
+
+        error_label = QLabel()
+        error_label.setStyleSheet("color: red;")
+        layout.addWidget(error_label)
+
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        ok_button = button_box.button(QDialogButtonBox.StandardButton.Ok)
+        ok_button.setEnabled(False)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        layout.addWidget(button_box)
+
+        def validate_inputs():
+            artist = artist_input.text().strip()
+            title = title_input.text().strip()
+            if artist and title:
+                ok_button.setEnabled(True)
+                error_label.clear()
+            else:
+                ok_button.setEnabled(False)
+                error_label.setText("Artist and Title are required.")
+
+        artist_input.textChanged.connect(validate_inputs)
+        title_input.textChanged.connect(validate_inputs)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            artist = artist_input.text().strip()
+            title = title_input.text().strip()
+            notes = notes_input.toPlainText().strip()
+            tuning = tuning_input.text().strip()
+
+            if artist and title:
+                logging.debug(f"Adding song: {title} by {artist}")
+                self.save_song(artist, title, notes, tuning)
+            else:
+                error_label.setText("Artist and Title are required.")
                 return
 
-            # Fetch track info from Last.fm
-            track_info = self.controller.get_track_info(artist, title)
-            album = track_info.get("track", {}).get("album", {}).get("title", "N/A")
-            duration = track_info.get("track", {}).get("duration", 0)
-            genres = [
-                tag["name"]
-                for tag in track_info.get("track", {}).get("toptags", {}).get("tag", [])
-            ]
-            album_art_url = track_info.get("album_art_url")
+    def save_song(self, artist, title, notes, tuning):
+        """
+        Save or update a song in the database.
+        """
+        logging.debug(f"Saving song: {title} by {artist}")
+        # Check if the song already exists
+        existing_song = self.controller.get_song(title, artist)
 
-            # Fetch and cache album art
-            self.controller.fetch_and_cache_album_art(album_art_url, album)
-
+        if existing_song:
+            # Update existing song
+            logging.debug(f"Updating existing song: {title} by {artist}")
+            existing_song.notes = notes
+            existing_song.tuning = tuning
+            success, message = self.controller.update_song_info(existing_song)
+        else:
+            # Create a new song object
             song = Song(
                 title=title,
                 artist=artist,
                 tuning=tuning,
                 notes=notes,
-                album=album,
-                duration=duration,
-                genres=genres,
             )
 
-            self.controller.save_song(song)
+            # Save the new song, which will fetch track info if needed
+            success, message = self.controller.save_song(song)
+
+        self.show_status_message(message, error=not success)
+        if success:
+            self.update_song_list()
+
+    def edit_song(self):
+        if not self.last_selected_item:
+            self.show_status_message("Please select a song to edit.", error=True)
+            logging.warning("Edit attempt failed: No song selected")
+            return
+
+        try:
+            artist = self.last_selected_item.text(0)
+            title = self.last_selected_item.text(1)
+            song = self.controller.get_song(title, artist)
+
+            if song:
+                dialog = QDialog(self)
+                dialog.setWindowTitle("Edit Song")
+                layout = QVBoxLayout(dialog)
+
+                notes_input = QTextEdit(dialog)
+                notes_input.setPlaceholderText("Notes")
+                notes_input.setText(song.notes)
+                layout.addWidget(notes_input)
+
+                tuning_input = QLineEdit(dialog)
+                tuning_input.setPlaceholderText("Tuning")
+                tuning_input.setText(song.tuning)
+                layout.addWidget(tuning_input)
+
+                button_box = QDialogButtonBox(
+                    QDialogButtonBox.StandardButton.Ok
+                    | QDialogButtonBox.StandardButton.Cancel
+                )
+                button_box.accepted.connect(dialog.accept)
+                button_box.rejected.connect(dialog.reject)
+                layout.addWidget(button_box)
+
+                if dialog.exec() == QDialog.DialogCode.Accepted:
+                    song.notes = notes_input.toPlainText()
+                    song.tuning = tuning_input.text()
+                    success, message = self.controller.update_song_info(song)
+                    if success:
+                        self.show_status_message(message)
+                        self.update_song_list()
+                        self.select_song_in_tree(title, artist)
+                        updated_song = self.controller.get_song(title, artist)
+                        self.display_song_info(updated_song)
+                    else:
+                        self.show_status_message(message, error=True)
+        except Exception as e:
+            logging.error(f"Error in edit_song: {str(e)}")
             self.show_status_message(
-                f"Saved {title} to {self.controller.get_default_db_path()}.", 5000
+                "An error occurred while editing the song.", error=True
             )
-            logging.debug("Song saved successfully")
 
-        self.update_song_list()
-        self.select_song_in_tree(title, artist)
-        self.display_song_info(song)
+    def delete_song(self):
+        """
+        Delete the selected song from the database.
+        """
+        if not self.last_selected_item:
+            self.show_status_message("Please select a song to delete.", error=True)
+            return
+
+        artist = self.last_selected_item.text(0)
+        title = self.last_selected_item.text(1)
+
+        logging.debug("Deleting song: %s by %s", title, artist)
+
+        try:
+            self.controller.delete_song(title, artist)
+            self.clear_song_display_info()
+            self.update_song_list()
+            self.show_status_message(f"Deleted {title} by {artist} successfully")
+        except Exception as e:
+            self.show_status_message(
+                "Unable to delete the song. Please try again.", error=True
+            )
+            logging.exception(f"Error in delete_song: {str(e)}")
+
+    def select_songs(self):
+        """
+        Placeholder for select songs functionality.
+        """
+        logging.debug("Select Songs button pressed")
+        songs = self.controller.get_all_songs()
+        if not songs:
+            self.show_status_message("No songs in the database to filter")
+            return
+
+        self.show_status_message("Select Songs button pressed")
 
     def load_songs(self):
         """
@@ -454,23 +494,6 @@ class SongApp(QMainWindow):
             )
             self.song_tree.addTopLevelItem(item)
         logging.debug("Songs loaded into tree view")
-
-    def delete_song(self):
-        """
-        Delete the selected song from the database.
-        """
-        artist = self.artist_entry.text()
-        title = self.title_entry.text()
-
-        logging.debug("Deleting song: %s by %s", title, artist)
-
-        self.controller.delete_song(title, artist)
-        self.clear_inputs()
-        self.clear_song_display_info()
-        self.update_song_list()
-        self.status_bar.showMessage(
-            "Deleted %s by %s successfully" % (title, artist), 5000
-        )
 
 
 if __name__ == "__main__":

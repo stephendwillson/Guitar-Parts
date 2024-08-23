@@ -55,7 +55,13 @@ class SongController:
         Returns:
             dict: A dictionary containing song details.
         """
-        return get_song(self.cursor, title, artist)
+        logging.debug(f"Getting song: {title} by {artist}")
+        song = get_song(self.cursor, title, artist)
+        if song:
+            logging.info(f"Found song: {title} by {artist}")
+        else:
+            logging.info(f"Song not found: {title} by {artist}")
+        return song
 
     def get_all_songs(self):
         """
@@ -64,16 +70,67 @@ class SongController:
         Returns:
             list: A list of dictionaries, each containing song details.
         """
-        return load_songs(self.cursor)
+        logging.debug("Getting all songs from the database")
+        songs = load_songs(self.cursor)
+        logging.info(f"Retrieved {len(songs)} songs from the database")
+        return songs
 
     def save_song(self, song):
         """
         Save a new song to the database.
 
         Args:
-            song (dict): A dictionary containing song details.
+            song (Song): A Song object containing song details.
+
+        Returns:
+            tuple: (bool, str) A tuple containing a success flag and a message.
         """
-        save_song(self.cursor, song)
+        try:
+            if not self.song_exists(song.title, song.artist):
+                logging.debug(
+                    "Song does not exist, fetching track info: %s by %s",
+                    song.title,
+                    song.artist,
+                )
+                track_info = self.get_track_info(song.artist, song.title)
+                if track_info:
+                    # Update song with additional info from Last.fm
+                    song.album = (
+                        track_info.get("track", {})
+                        .get("album", {})
+                        .get("title", "Unknown")
+                    )
+                    song.duration = track_info.get("track", {}).get("duration", 0)
+                    song.genres = [
+                        tag["name"]
+                        for tag in track_info.get("track", {})
+                        .get("toptags", {})
+                        .get("tag", [])
+                    ]
+
+                    # Fetch and cache album art
+                    album_art_url = (
+                        track_info.get("track", {})
+                        .get("album", {})
+                        .get("image", [])[-1]
+                        .get("#text")
+                    )
+                    if album_art_url:
+                        self.fetch_and_cache_album_art(album_art_url, song.album)
+                else:
+                    # If no track info found, use default values
+                    song.album = song.album or "Unknown"
+                    song.duration = song.duration or 0
+                    song.genres = song.genres or []
+
+            save_song(self.cursor, song)
+            self.conn.commit()
+            logging.info(f"Song saved successfully: {song.title} by {song.artist}")
+            return True, "Song saved successfully"
+        except Exception as e:
+            self.conn.rollback()
+            logging.error(f"Error saving song {song.title} by {song.artist}: {str(e)}")
+            return False, "Unable to save the song. Please try again."
 
     def delete_song(self, title, artist):
         """
@@ -83,7 +140,16 @@ class SongController:
             title (str): The title of the song.
             artist (str): The artist of the song.
         """
-        delete_song(self.cursor, title, artist)
+        logging.info(f"Attempting to delete song: {title} by {artist}")
+        try:
+            delete_song(self.cursor, title, artist)
+            self.conn.commit()
+            logging.info(f"Successfully deleted song: {title} by {artist}")
+            return True, "Song deleted successfully"
+        except Exception as e:
+            self.conn.rollback()
+            logging.error(f"Error deleting song {title} by {artist}: {str(e)}")
+            return False, "Unable to delete the song. Please try again."
 
     def update_song_info(self, song):
         """
@@ -92,7 +158,18 @@ class SongController:
         Args:
             song (dict): A dictionary containing updated song details.
         """
-        update_song_info(self.cursor, song)
+        logging.info(f"Updating song info for: {song.title} by {song.artist}")
+        try:
+            update_song_info(self.cursor, song)
+            logging.info(
+                f"Successfully updated song info for: {song.title} by {song.artist}"
+            )
+            return True, "Song updated successfully"
+        except Exception as e:
+            logging.error(
+                f"Error updating song info for {song.title} by {song.artist}: {str(e)}"
+            )
+            return False, "Unable to update the song. Please try again."
 
     def get_track_info(self, artist, track):
         """
@@ -105,7 +182,13 @@ class SongController:
         Returns:
             dict: A dictionary containing track information.
         """
-        return get_track_info(artist, track)
+        logging.debug(f"Getting track info for {track} by {artist}")
+        track_info = get_track_info(artist, track)
+        if track_info:
+            logging.info(f"Retrieved track info for {track} by {artist}")
+        else:
+            logging.warning(f"Failed to retrieve track info for {track} by {artist}")
+        return track_info
 
     def get_default_db_path(self):
         """
@@ -171,4 +254,8 @@ class SongController:
             return None
 
         album_art_path = os.path.join(self.cache_dir, f"{album_name}.jpg")
+        if os.path.exists(album_art_path):
+            logging.info(f"Found cached album art for {album_name}")
+        else:
+            logging.info(f"No cached album art found for {album_name}")
         return album_art_path if os.path.exists(album_art_path) else None

@@ -32,6 +32,7 @@ def get_track_info(artist, track):
     Returns:
         dict: Dictionary containing track info.
     """
+    logging.info(f"Fetching track info for: {track} by {artist}")
     method = "track.getInfo"
     artist = artist.replace(" ", "+")
     track = track.replace(" ", "+")
@@ -49,10 +50,11 @@ def get_track_info(artist, track):
         images = track_info.get("track", {}).get("album", {}).get("image", [])
         album_art_url = images[-1]["#text"] if images else None  # Get the largest image
         track_info["album_art_url"] = album_art_url
+        logging.info(f"Successfully fetched track info for: {track} by {artist}")
         return track_info
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching track info: {e}")
-        return {}
+        logging.error(f"Error fetching track info for {track} by {artist}: {str(e)}")
+        return None
 
 
 def get_album_name(artist, track):
