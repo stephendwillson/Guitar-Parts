@@ -4,16 +4,16 @@
 
 | Name                            |    Stmts |     Miss |   Cover |   Missing |
 |-------------------------------- | -------: | -------: | ------: | --------: |
-| controllers/song\_controller.py |       42 |       11 |     74% |58, 76, 86, 95, 129, 135-138, 170-171 |
+| controllers/song\_controller.py |       95 |       58 |     39% |45, 61, 88-133, 143-152, 161-172, 185-191, 200, 212, 218-221, 240, 253-254, 258 |
 | models/song.py                  |       11 |        1 |     91% |        48 |
-| services/db.py                  |       42 |        8 |     81% |     51-70 |
-| services/lastfm\_api.py         |       54 |        4 |     93% | 19, 53-55 |
+| services/db.py                  |       42 |        2 |     95% |     59-60 |
+| services/lastfm\_api.py         |       56 |        7 |     88% |19, 55-57, 118-120 |
 | tests/test\_db.py               |       47 |        0 |    100% |           |
 | tests/test\_lastfm\_api.py      |       55 |        0 |    100% |           |
-| tests/test\_main\_window.py     |      112 |        0 |    100% |           |
+| tests/test\_main\_window.py     |      194 |        0 |    100% |           |
 | utils/utils.py                  |       27 |        5 |     81% |     74-79 |
-| views/main\_window.py           |      268 |       58 |     78% |194-218, 259, 286-288, 300-316, 374-380, 387-403, 406-410, 477-480 |
-|                       **TOTAL** |  **658** |   **87** | **87%** |           |
+| views/main\_window.py           |      289 |       39 |     87% |174-191, 237, 261-263, 295, 342-349, 442-445, 467-471, 483, 500-503 |
+|                       **TOTAL** |  **816** |  **112** | **86%** |           |
 
 
 ## Setup coverage badge
