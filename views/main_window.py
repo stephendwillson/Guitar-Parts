@@ -22,6 +22,8 @@ from PyQt6.QtWidgets import (
     QHeaderView,
     QDialog,
     QDialogButtonBox,
+    QCheckBox,
+    QMessageBox,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
@@ -229,13 +231,16 @@ class SongApp(QMainWindow):
         self.title_label.setText(f"Title: {titlecase(song.title)}")
         self.album_label.setText(f"Album: {song.album}")
 
-        # Show duration as minutes:seconds
         if song.duration:
-            minutes, seconds = divmod(int(song.duration) // 1000, 60)
-            formatted_duration = f"{minutes}:{seconds:02}"
+            try:
+                minutes, seconds = divmod(int(song.duration) // 1000, 60)
+                duration_str = f"{minutes:02d}:{seconds:02d}"
+            except ValueError:
+                duration_str = "Unknown"
         else:
-            formatted_duration = "N/A"
-        self.duration_label.setText(f"Duration: {formatted_duration}")
+            duration_str = "Unknown"
+
+        self.duration_label.setText(f"Duration: {duration_str}")
 
         self.genres_label.setText(
             f"Genres: {', '.join(song.genres) if song.genres else 'N/A'}"
@@ -249,7 +254,7 @@ class SongApp(QMainWindow):
             song.title,
             song.artist,
             song.album,
-            formatted_duration,
+            duration_str,
             ", ".join(song.genres) if song.genres else "N/A",
             song.tuning,
             song.notes,
@@ -300,6 +305,29 @@ class SongApp(QMainWindow):
         # Set a timer to clear the message after the specified duration
         QTimer.singleShot(duration, self.status_label.clear)
 
+    def validate_duration(self, duration):
+        """
+        Validate the duration input.
+
+        Args:
+            duration (str): The duration string to validate.
+
+        Returns:
+            bool: True if valid, False otherwise.
+        """
+        if not duration:  # Allow empty duration
+            return True
+
+        # Check if it's in the format of "mm:ss" or just seconds
+        if ":" in duration:
+            parts = duration.split(":")
+            if len(parts) != 2:
+                return False
+            minutes, seconds = parts
+            return minutes.isdigit() and seconds.isdigit() and int(seconds) < 60
+        else:
+            return duration.isdigit()
+
     def add_song(self):
         """
         Prompt user for new song details and add to database.
@@ -324,6 +352,28 @@ class SongApp(QMainWindow):
         tuning_input = QLineEdit(dialog)
         tuning_input.setPlaceholderText("Tuning (optional)")
         layout.addWidget(tuning_input)
+
+        custom_song_checkbox = QCheckBox("Custom Song")
+        layout.addWidget(custom_song_checkbox)
+
+        # Create custom fields
+        album_input = QLineEdit(dialog)
+        album_input.setPlaceholderText("Album (optional)")
+
+        duration_input = QLineEdit(dialog)
+        duration_input.setPlaceholderText("Duration (optional, format: MM:SS)")
+
+        genres_input = QLineEdit(dialog)
+        genres_input.setPlaceholderText("Genres (optional, comma-separated)")
+
+        custom_fields_layout = QVBoxLayout()
+        custom_fields_layout.addWidget(album_input)
+        custom_fields_layout.addWidget(duration_input)
+        custom_fields_layout.addWidget(genres_input)
+        custom_fields_widget = QWidget()
+        custom_fields_widget.setLayout(custom_fields_layout)
+        custom_fields_widget.hide()
+        layout.addWidget(custom_fields_widget)
 
         error_label = QLabel()
         error_label.setStyleSheet("color: red;")
@@ -351,24 +401,85 @@ class SongApp(QMainWindow):
         artist_input.textChanged.connect(validate_inputs)
         title_input.textChanged.connect(validate_inputs)
 
+        def toggle_custom_fields():
+            is_custom = custom_song_checkbox.isChecked()
+            custom_fields_widget.setVisible(is_custom)
+            dialog.adjustSize()
+            logging.debug(f"Custom Song checkbox state changed. Checked: {is_custom}")
+            logging.debug(
+                f"Custom fields visibility: {custom_fields_widget.isVisible()}"
+            )
+
+        custom_song_checkbox.stateChanged.connect(lambda: toggle_custom_fields())
+
+        # Log initial state
+        logging.debug(
+            f"Initial Custom Song checkbox state: {custom_song_checkbox.isChecked()}"
+        )
+
         if dialog.exec() == QDialog.DialogCode.Accepted:
             artist = artist_input.text().strip()
             title = title_input.text().strip()
             notes = notes_input.toPlainText().strip()
             tuning = tuning_input.text().strip()
+            is_custom = custom_song_checkbox.isChecked()
+
+            logging.debug(f"Dialog accepted. Is custom: {is_custom}")
 
             if artist and title:
-                logging.debug(f"Adding song: {title} by {artist}")
-                self.save_song(artist, title, notes, tuning)
+                logging.debug(
+                    f"Adding {'custom ' if is_custom else ''}song: {title} by {artist}"
+                )
+                if is_custom:
+                    album = album_input.text().strip()
+                    duration = duration_input.text().strip()
+                    genres = [
+                        genre.strip()
+                        for genre in genres_input.text().split(",")
+                        if genre.strip()
+                    ]
+
+                    # Validate duration
+                    if not self.validate_duration(duration):
+                        error_label.setText(
+                            "Invalid duration format. Use 'mm:ss' or seconds."
+                        )
+                        return
+
+                    # Convert duration to milliseconds if it's valid
+                    if duration:
+                        if ":" in duration:
+                            minutes, seconds = map(int, duration.split(":"))
+                            duration = str((minutes * 60 + seconds) * 1000)
+                        else:
+                            duration = str(int(duration) * 1000)
+
+                    self.save_song(
+                        artist, title, notes, tuning, album, duration, genres, is_custom
+                    )
+                else:
+                    self.save_song(artist, title, notes, tuning)
             else:
                 error_label.setText("Artist and Title are required.")
                 return
 
-    def save_song(self, artist, title, notes, tuning):
+    def save_song(
+        self,
+        artist,
+        title,
+        notes,
+        tuning,
+        album=None,
+        duration=None,
+        genres=None,
+        is_custom=False,
+    ):
         """
         Save or update a song in the database.
         """
-        logging.debug(f"Saving song: {title} by {artist}")
+        logging.debug(
+            f"Saving {'custom ' if is_custom else ''}song: {title} by {artist}"
+        )
         # Check if the song already exists
         existing_song = self.controller.get_song(title, artist)
 
@@ -377,6 +488,10 @@ class SongApp(QMainWindow):
             logging.debug(f"Updating existing song: {title} by {artist}")
             existing_song.notes = notes
             existing_song.tuning = tuning
+            if is_custom:
+                existing_song.album = album
+                existing_song.duration = duration
+                existing_song.genres = genres
             success, message = self.controller.update_song_info(existing_song)
         else:
             # Create a new song object
@@ -385,14 +500,23 @@ class SongApp(QMainWindow):
                 artist=artist,
                 tuning=tuning,
                 notes=notes,
+                album=album,
+                duration=duration,
+                genres=genres,
             )
 
             # Save the new song, which will fetch track info if needed
-            success, message = self.controller.save_song(song)
+            success, message = self.controller.save_song(song, is_custom)
 
-        self.show_status_message(message, error=not success)
         if success:
+            self.show_status_message(message)
             self.update_song_list()
+        else:
+            if "Check your spelling" in message:
+                # Show a more prominent message for songs not found on Last.FM
+                QMessageBox.warning(self, "Song Not Found", message)
+            else:
+                self.show_status_message(message, error=True)
 
     def edit_song(self):
         if not self.last_selected_item:

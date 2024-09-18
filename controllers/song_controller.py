@@ -75,53 +75,49 @@ class SongController:
         logging.info(f"Retrieved {len(songs)} songs from the database")
         return songs
 
-    def save_song(self, song):
+    def save_song(self, song, is_custom=False):
         """
         Save a new song to the database.
 
         Args:
             song (Song): A Song object containing song details.
+            is_custom (bool): Whether the song is a custom entry.
 
         Returns:
             tuple: (bool, str) A tuple containing a success flag and a message.
         """
         try:
             if not self.song_exists(song.title, song.artist):
-                logging.debug(
-                    "Song does not exist, fetching track info: %s by %s",
-                    song.title,
-                    song.artist,
-                )
-                track_info = self.get_track_info(song.artist, song.title)
-                if track_info:
-                    # Update song with additional info from Last.fm
-                    song.album = (
-                        track_info.get("track", {})
-                        .get("album", {})
-                        .get("title", "Unknown")
+                if not is_custom:
+                    logging.debug(
+                        "Song does not exist, fetching track info: %s by %s",
+                        song.title,
+                        song.artist,
                     )
-                    song.duration = track_info.get("track", {}).get("duration", 0)
-                    song.genres = [
-                        tag["name"]
-                        for tag in track_info.get("track", {})
-                        .get("toptags", {})
-                        .get("tag", [])
-                    ]
+                    track_info = self.get_track_info(song.artist, song.title)
+                    if track_info and "error" not in track_info:
+                        # Update song with additional info from Last.fm
+                        track = track_info.get("track", {})
+                        song.album = track.get("album", {}).get("title", "Unknown")
+                        song.duration = track.get("duration", 0)
+                        song.genres = [
+                            tag["name"]
+                            for tag in track.get("toptags", {}).get("tag", [])
+                        ]
 
-                    # Fetch and cache album art
-                    album_art_url = (
-                        track_info.get("track", {})
-                        .get("album", {})
-                        .get("image", [])[-1]
-                        .get("#text")
-                    )
-                    if album_art_url:
-                        self.fetch_and_cache_album_art(album_art_url, song.album)
-                else:
-                    # If no track info found, use default values
-                    song.album = song.album or "Unknown"
-                    song.duration = song.duration or 0
-                    song.genres = song.genres or []
+                        # Fetch and cache album art
+                        album_images = track.get("album", {}).get("image", [])
+                        if album_images:
+                            album_art_url = album_images[-1].get("#text")
+                            if album_art_url:
+                                self.fetch_and_cache_album_art(
+                                    album_art_url, song.album
+                                )
+                    else:
+                        return False, (
+                            "Song not found on Last.FM. Check your spelling, "
+                            "or did you mean to add as a custom song?"
+                        )
 
             save_song(self.cursor, song)
             self.conn.commit()

@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QLabel,
     QDialogButtonBox,
+    QCheckBox,
 )
 from unittest.mock import patch, MagicMock
 import logging
@@ -215,27 +216,65 @@ def test_show_status_message(song_app):
 @patch("controllers.song_controller.SongController.save_song")
 def test_add_song(mock_save_song, mock_dialog_exec, song_app):
     """
-    Test if a new song is added correctly.
+    Test if a new song is added correctly, including custom song functionality.
     """
     mock_dialog_exec.return_value = QDialog.DialogCode.Accepted
 
     with patch.object(QLineEdit, "text") as mock_line_edit_text, patch.object(
         QTextEdit, "toPlainText"
-    ) as mock_text_edit_text:
+    ) as mock_text_edit_text, patch.object(
+        QCheckBox, "isChecked"
+    ) as mock_checkbox_checked:
 
+        # Test adding a non-custom song
         mock_line_edit_text.side_effect = ["Test Artist", "Test Song", "Standard"]
         mock_text_edit_text.return_value = "Test Notes"
+        mock_checkbox_checked.return_value = False
         mock_save_song.return_value = (True, "Song saved successfully")
 
         song_app.add_song()
 
-    mock_save_song.assert_called_once()
-    saved_song = mock_save_song.call_args[0][0]
-    assert isinstance(saved_song, Song)
-    assert saved_song.title == "Test Song"
-    assert saved_song.artist == "Test Artist"
-    assert saved_song.tuning == "Standard"
-    assert saved_song.notes == "Test Notes"
+        mock_save_song.assert_called_once()
+        saved_song = mock_save_song.call_args[0][0]
+        assert isinstance(saved_song, Song)
+        assert saved_song.title == "Test Song"
+        assert saved_song.artist == "Test Artist"
+        assert saved_song.tuning == "Standard"
+        assert saved_song.notes == "Test Notes"
+        assert not mock_save_song.call_args[0][1]  # is_custom should be False
+
+        # Reset mocks
+        mock_save_song.reset_mock()
+        mock_line_edit_text.reset_mock()
+        mock_text_edit_text.reset_mock()
+        mock_checkbox_checked.reset_mock()
+
+        # Test adding a custom song
+        mock_line_edit_text.side_effect = [
+            "Custom Artist",
+            "Custom Song",
+            "Drop D",
+            "Custom Album",
+            "3:30",
+            "Rock, Metal",
+        ]
+        mock_text_edit_text.return_value = "Custom Notes"
+        mock_checkbox_checked.return_value = True
+        mock_save_song.return_value = (True, "Custom song saved successfully")
+
+        song_app.add_song()
+
+        mock_save_song.assert_called_once()
+        saved_song = mock_save_song.call_args[0][0]
+        assert isinstance(saved_song, Song)
+        assert saved_song.title == "Custom Song"
+        assert saved_song.artist == "Custom Artist"
+        assert saved_song.tuning == "Drop D"
+        assert saved_song.notes == "Custom Notes"
+        assert saved_song.album == "Custom Album"
+        assert saved_song.duration == "210000"  # 3:30 in milliseconds
+        assert saved_song.genres == ["Rock", "Metal"]
+        assert mock_save_song.call_args[0][1]  # is_custom should be True
 
 
 @patch("PyQt6.QtWidgets.QDialog.exec")
