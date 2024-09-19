@@ -17,24 +17,6 @@ The app uses the Last.fm API to fetch song details based on the title and artist
 #### Python
 Ensure Python (3.6 or higher) is installed. It can be downloaded from [python.org](https://www.python.org/downloads/).
 
-##### Windows
-1. Download and install Python from the official [Python website](https://www.python.org/downloads/windows/).
-2. Make sure to check the box that says "Add Python to PATH" during installation.
-
-##### macOS
-1. Download and install Python from the official [Python website](https://www.python.org/downloads/macos/).
-2. Alternatively, Homebrew can be used:
-   ```sh
-   brew install python
-   ```
-
-##### Linux
-Most Linux distributions come with Python pre-installed. If Python is not installed, it can be installed using the package manager. For example, on Debian-based systems:
-```sh
-sudo apt-get update
-sudo apt-get install python3
-```
-
 ### Installation
 1. Clone the repository:
    ```sh
@@ -74,19 +56,11 @@ python3 -m venv venv
 
 # Activate venv (Linux/macOS)
 source venv/bin/activate
-
-# Activate venv (Windows)
-venv\Scripts\activate
 ```
 
 #### Python modules
 ```sh
 pip install -r requirements.txt
-```
-
-#### Run Application
-```sh
-python guitar_parts.py
 ```
 
 ### Running Tests
