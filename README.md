@@ -91,3 +91,12 @@ You can set these variables manually or by creating a `.env` file in the root di
 ```sh
 source .env
 ```
+## Known Issues
+
+- Last.fm will sometimes prioritize compilations or live albums over the original studio album. For example, a query for Led Zeppelin's "Rain Song" returns the album as "Tour Over Europe 1980". Looking through Last.fm API support forums, this is a known issue and is unlikely to be solved anytime soon.
+
+   See the following forum topics for more information:
+
+   - [Last.fm API - How to get the original album instead of these compilations?](https://support.last.fm/t/how-to-get-the-original-album-instead-of-these-compilations/60771/7)
+   - [Last.fm API - Future of the API?](https://support.last.fm/t/future-of-the-api/89942/5)
+
