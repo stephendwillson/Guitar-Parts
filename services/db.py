@@ -184,3 +184,42 @@ def song_exists(cursor, title, artist):
         (title.lower(), artist.lower()),
     )
     return cursor.fetchone()[0] > 0
+
+
+def get_unique_genres(cursor):
+    """
+    Fetch all unique genres from the database, excluding artist names.
+    """
+    cursor.execute(
+        "SELECT DISTINCT genres, artist FROM songs "
+        "WHERE genres IS NOT NULL AND genres != ''"
+    )
+    all_genres = cursor.fetchall()
+    unique_genres = set()
+    artists = set()
+    for genres_string, artist in all_genres:
+        genres = genres_string.split(", ")
+        artists.add(artist.lower())
+        unique_genres.update(genre.lower() for genre in genres)
+
+    # Remove genres that match artist names
+    filtered_genres = unique_genres - artists
+
+    return sorted(filtered_genres)
+
+
+def get_unique_tunings(cursor):
+    """
+    Fetch all unique tunings from the database, case-insensitive.
+    """
+    cursor.execute(
+        "SELECT DISTINCT tuning FROM songs WHERE tuning IS NOT NULL AND tuning != ''"
+    )
+    tunings = [tuning[0] for tuning in cursor.fetchall()]
+
+    def format_tuning(tuning):
+        if len(tuning) == 6 and tuning.isupper():
+            return tuning
+        return ' '.join(word.capitalize() for word in tuning.split())
+
+    return sorted(set(format_tuning(tuning) for tuning in tunings))

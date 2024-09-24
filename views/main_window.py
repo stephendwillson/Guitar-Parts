@@ -24,6 +24,8 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QCheckBox,
     QMessageBox,
+    QComboBox,
+    QSpinBox,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
@@ -64,6 +66,15 @@ class SongApp(QMainWindow):
         self.main_layout = QVBoxLayout(self.central_widget)
 
         self.last_selected_item = None
+
+        self.filter_settings = {
+            'artist': '',
+            'title': '',
+            'album': '',
+            'genre': '',
+            'tuning': '',
+            'num_songs': 0
+        }
 
         self.setup_ui()
         logging.debug("UI setup complete")
@@ -112,17 +123,17 @@ class SongApp(QMainWindow):
         self.button_layout.addWidget(self.edit_button)
 
         self.select_songs_button = QPushButton("Select Songs...")
-        self.select_songs_button.clicked.connect(self.select_songs)
+        self.select_songs_button.clicked.connect(self.show_select_songs_dialog)
         self.button_layout.addWidget(self.select_songs_button)
 
         # Add button layout to main layout
         self.main_layout.addLayout(self.button_layout)
 
         # Search input
-        self.search_entry = QLineEdit()
-        self.search_entry.setPlaceholderText("Search by Title or Artist")
-        self.search_entry.textChanged.connect(self.update_song_list)
-        self.main_layout.addWidget(self.search_entry)
+        self.search_input = QLineEdit(self)
+        self.search_input.setPlaceholderText("Search by Title or Artist")
+        self.search_input.textChanged.connect(self.on_search_text_changed)
+        self.main_layout.addWidget(self.search_input)
 
         # Metadata display
         self.scroll_area = QScrollArea()
@@ -158,7 +169,7 @@ class SongApp(QMainWindow):
         self.metadata_album_layout.addWidget(self.album_art_label)
         self.main_layout.addLayout(self.metadata_album_layout)
 
-        self.update_song_list()
+        self.load_songs()
 
         # Status bar
         self.status_bar = self.statusBar()
@@ -212,17 +223,17 @@ class SongApp(QMainWindow):
                 self.last_selected_item = item
                 break
 
-    def update_song_list(self):
+    def update_song_list(self, songs):
         """
         Update the song list in the UI.
         """
         self.song_tree.clear()
-        songs = self.controller.get_all_songs()
         for song in songs:
             item = QTreeWidgetItem(
                 [titlecase(song.artist), titlecase(song.title), song.album, song.tuning]
             )
             self.song_tree.addTopLevelItem(item)
+        self.song_tree.sortItems(0, Qt.SortOrder.AscendingOrder)
 
     def display_song_info(self, song):
         logging.debug("Displaying song info: %s by %s", song.title, song.artist)
@@ -450,15 +461,17 @@ class SongApp(QMainWindow):
                     if duration:
                         if ":" in duration:
                             minutes, seconds = map(int, duration.split(":"))
-                            duration = str((minutes * 60 + seconds) * 1000)
+                            duration = str((minutes * 60 + seconds))
                         else:
-                            duration = str(int(duration) * 1000)
+                            duration = str(int(duration))
 
                     self.save_song(
                         artist, title, notes, tuning, album, duration, genres, is_custom
                     )
                 else:
-                    self.save_song(artist, title, notes, tuning)
+                    self.save_song(
+                        artist, title, notes, tuning, None, None, None, is_custom
+                    )
             else:
                 error_label.setText("Artist and Title are required.")
                 return
@@ -510,7 +523,7 @@ class SongApp(QMainWindow):
 
         if success:
             self.show_status_message(message)
-            self.update_song_list()
+            self.update_song_list(self.controller.get_all_songs())
         else:
             if "Check your spelling" in message:
                 # Show a more prominent message for songs not found on Last.FM
@@ -558,7 +571,7 @@ class SongApp(QMainWindow):
                     success, message = self.controller.update_song_info(song)
                     if success:
                         self.show_status_message(message)
-                        self.update_song_list()
+                        self.update_song_list(self.controller.get_all_songs())
                         self.select_song_in_tree(title, artist)
                         updated_song = self.controller.get_song(title, artist)
                         self.display_song_info(updated_song)
@@ -584,40 +597,163 @@ class SongApp(QMainWindow):
         logging.debug("Deleting song: %s by %s", title, artist)
 
         try:
-            self.controller.delete_song(title, artist)
-            self.clear_song_display_info()
-            self.update_song_list()
-            self.show_status_message(f"Deleted {title} by {artist} successfully")
+            success, message = self.controller.delete_song(title, artist)
+            if success:
+                self.clear_song_display_info()
+                self.update_song_list(self.controller.get_all_songs())
+                self.show_status_message(f"Deleted '{title}' by {artist} successfully")
+            else:
+                self.show_status_message(
+                    f"Failed to delete song: {message}", error=True)
         except Exception as e:
             self.show_status_message(
                 "Unable to delete the song. Please try again.", error=True
             )
             logging.exception(f"Error in delete_song: {str(e)}")
 
-    def select_songs(self):
-        """
-        Placeholder for select songs functionality.
-        """
-        logging.debug("Select Songs button pressed")
+    def show_select_songs_dialog(self):
+        logging.debug("Opening Select Songs dialog")
         songs = self.controller.get_all_songs()
+
         if not songs:
             self.show_status_message("No songs in the database to filter")
             return
 
-        self.show_status_message("Select Songs button pressed")
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Select Songs")
+        layout = QVBoxLayout()
+        logging.debug("Select Songs button pressed")
+
+        # Create input fields
+        input_fields = {}
+        for field in ['artist', 'title', 'album']:
+            input_fields[field] = QLineEdit()
+            input_fields[field].setText(self.filter_settings[field])
+            layout.addWidget(QLabel(f"{field.capitalize()}:"))
+            layout.addWidget(input_fields[field])
+
+        # Create dropdown fields
+        dropdown_fields = {}
+
+        # Genre dropdown
+        dropdown_fields['genre'] = QComboBox()
+        dropdown_fields['genre'].addItem("")  # Empty option
+        dropdown_fields['genre'].addItems(self.controller.get_unique_genres())
+        dropdown_fields['genre'].setCurrentText(self.filter_settings['genre'])
+        layout.addWidget(QLabel("Genre:"))
+        layout.addWidget(dropdown_fields['genre'])
+
+        # Tuning dropdown
+        dropdown_fields['tuning'] = QComboBox()
+        dropdown_fields['tuning'].addItem("")  # Empty option
+        dropdown_fields['tuning'].addItems(self.controller.get_unique_tunings())
+        dropdown_fields['tuning'].setCurrentText(self.filter_settings['tuning'])
+        layout.addWidget(QLabel("Tuning:"))
+        layout.addWidget(dropdown_fields['tuning'])
+
+        # Number of songs input
+        num_songs_label = QLabel("Number of songs (0 for all):")
+        layout.addWidget(num_songs_label)
+        num_songs_input = QSpinBox()
+        num_songs_input.setRange(0, 1000)
+        num_songs_input.setValue(self.filter_settings['num_songs'])
+        layout.addWidget(num_songs_input)
+
+        # Add summary text area
+        summary_text = QTextEdit()
+        summary_text.setReadOnly(True)
+        layout.addWidget(QLabel("Filter Summary:"))
+        layout.addWidget(summary_text)
+
+        # Add buttons
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        clear_button = QPushButton("Clear Filters")
+        button_box.addButton(clear_button, QDialogButtonBox.ButtonRole.ResetRole)
+        layout.addWidget(button_box)
+
+        dialog.setLayout(layout)
+
+        # Connect signals
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+
+        def clear_filters():
+            logging.debug("Clearing all filters")
+            for field in input_fields.values():
+                field.clear()
+            for field in dropdown_fields.values():
+                field.setCurrentIndex(0)
+            num_songs_input.setValue(0)
+            summary_text.clear()
+
+        clear_button.clicked.connect(clear_filters)
+
+        def update_summary():
+            summary = []
+            for field, input_widget in input_fields.items():
+                if input_widget.text():
+                    summary.append(f"{field.capitalize()}: {input_widget.text()}")
+            for field, dropdown in dropdown_fields.items():
+                if dropdown.currentText():
+                    summary.append(f"{field.capitalize()}: {dropdown.currentText()}")
+            if num_songs_input.value() > 0:
+                summary.append(f"Number of songs: {num_songs_input.value()}")
+            summary_text.setText("\n".join(summary))
+
+        for input_field in input_fields.values():
+            input_field.textChanged.connect(update_summary)
+        for dropdown in dropdown_fields.values():
+            dropdown.currentTextChanged.connect(update_summary)
+        num_songs_input.valueChanged.connect(update_summary)
+
+        # Initialize summary
+        update_summary()
+
+        # Show the dialog
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            logging.debug("Select Songs dialog accepted")
+            self.filter_settings = {
+                'artist': input_fields['artist'].text(),
+                'title': input_fields['title'].text(),
+                'album': input_fields['album'].text(),
+                'genre': dropdown_fields['genre'].currentText(),
+                'tuning': dropdown_fields['tuning'].currentText(),
+                'num_songs': num_songs_input.value()
+            }
+            filtered_songs = self.controller.filter_songs(
+                artist=self.filter_settings['artist'],
+                title=self.filter_settings['title'],
+                album=self.filter_settings['album'],
+                genre=self.filter_settings['genre'],
+                tuning=self.filter_settings['tuning'],
+                num_songs=self.filter_settings['num_songs']
+            )
+            self.update_song_list(filtered_songs)
+            self.show_status_message(f"Filtered to {len(filtered_songs)} songs")
+        else:
+            logging.debug("Select Songs dialog cancelled")
 
     def load_songs(self):
         """
         Load songs from the database and populate the tree widget.
         """
+        logging.debug("Loading songs from database")
         songs = self.controller.get_all_songs()
-        self.song_tree.clear()
-        for song in songs:
-            item = QTreeWidgetItem(
-                [titlecase(song.artist), titlecase(song.title), song.album, song.tuning]
-            )
-            self.song_tree.addTopLevelItem(item)
+        self.update_song_list(songs)
         logging.debug("Songs loaded into tree view")
+
+    def on_search_text_changed(self, text):
+        """
+        Handle search text changes and update the song list.
+        """
+        if text:
+            songs = self.controller.search_songs(text)
+        else:
+            songs = self.controller.get_all_songs()
+
+        self.update_song_list(songs)
 
 
 if __name__ == "__main__":

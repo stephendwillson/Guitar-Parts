@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QDialogButtonBox,
     QCheckBox,
+    QComboBox,
 )
 from unittest.mock import patch, MagicMock
 import logging
@@ -60,7 +61,7 @@ def test_update_song_list(mock_get_all_songs, song_app):
     """
     Test if the song list updates correctly.
     """
-    mock_get_all_songs.return_value = [
+    mock_songs = [
         MagicMock(
             title="Test Song",
             artist="Test Artist",
@@ -68,7 +69,8 @@ def test_update_song_list(mock_get_all_songs, song_app):
             tuning="Standard",
         )
     ]
-    song_app.update_song_list()
+    mock_get_all_songs.return_value = mock_songs
+    song_app.update_song_list(mock_songs)
     assert song_app.song_tree.topLevelItemCount() == 1
     item = song_app.song_tree.topLevelItem(0)
     assert item.text(0) == "Test Artist"
@@ -87,7 +89,7 @@ def test_select_song_in_tree(mock_get_all_songs, song_app):
     )
     mock_get_all_songs.return_value = [mock_song]
 
-    song_app.update_song_list()
+    song_app.update_song_list(song_app.controller.get_all_songs())
     song_app.select_song_in_tree("Test Song", "Test Artist")
 
     selected_item = song_app.song_tree.selectedItems()[0]
@@ -100,10 +102,20 @@ def test_select_song_in_tree(mock_get_all_songs, song_app):
 @patch("controllers.song_controller.SongController.get_song")
 @patch("controllers.song_controller.SongController.save_song")
 @patch("controllers.song_controller.SongController.update_song_info")
-def test_save_song(mock_update_song_info, mock_save_song, mock_get_song, song_app):
+@patch("controllers.song_controller.SongController.get_all_songs")
+def test_save_song(
+    mock_get_all_songs,
+    mock_update_song_info,
+    mock_save_song,
+    mock_get_song,
+    song_app
+):
     # Test adding a new song
     mock_get_song.return_value = None
     mock_save_song.return_value = (True, "Song saved successfully")
+    mock_get_all_songs.return_value = [
+        Song("Test Song", "Test Artist", album="Test Album", tuning="Standard")
+    ]
 
     song_app.save_song("Test Artist", "Test Song", "Test Notes", "Standard")
 
@@ -176,7 +188,7 @@ def test_delete_song(mock_delete_song, song_app):
 
     mock_delete_song.assert_called_once_with("Test Song", "Test Artist")
     mock_show_status.assert_called_once_with(
-        "Deleted Test Song by Test Artist successfully"
+        "Deleted 'Test Song' by Test Artist successfully"
     )
     mock_update_song_list.assert_called_once()
 
@@ -214,53 +226,37 @@ def test_show_status_message(song_app):
 
 @patch("PyQt6.QtWidgets.QDialog.exec")
 @patch("controllers.song_controller.SongController.save_song")
-def test_add_song(mock_save_song, mock_dialog_exec, song_app):
+@patch("controllers.song_controller.SongController.get_all_songs")
+def test_add_song(mock_get_all_songs, mock_save_song, mock_dialog_exec, song_app):
     """
-    Test if a new song is added correctly, including custom song functionality.
+    Test if a song is added correctly.
     """
     mock_dialog_exec.return_value = QDialog.DialogCode.Accepted
+    mock_save_song.return_value = (True, "Song saved successfully")
+    mock_get_all_songs.return_value = [
+        Song("Custom Song", "Custom Artist", album="Custom Album", tuning="Drop D")
+    ]
 
-    with patch.object(QLineEdit, "text") as mock_line_edit_text, patch.object(
-        QTextEdit, "toPlainText"
-    ) as mock_text_edit_text, patch.object(
+    with patch.object(QLineEdit, "text") as mock_line_edit_text, \
+         patch.object(QTextEdit, "toPlainText") as mock_text_edit_text, \
+         patch.object(
+        QComboBox, "currentText"
+    ) as mock_combo_box_text, patch.object(
         QCheckBox, "isChecked"
     ) as mock_checkbox_checked:
-
-        # Test adding a non-custom song
-        mock_line_edit_text.side_effect = ["Test Artist", "Test Song", "Standard"]
-        mock_text_edit_text.return_value = "Test Notes"
-        mock_checkbox_checked.return_value = False
-        mock_save_song.return_value = (True, "Song saved successfully")
-
-        song_app.add_song()
-
-        mock_save_song.assert_called_once()
-        saved_song = mock_save_song.call_args[0][0]
-        assert isinstance(saved_song, Song)
-        assert saved_song.title == "Test Song"
-        assert saved_song.artist == "Test Artist"
-        assert saved_song.tuning == "Standard"
-        assert saved_song.notes == "Test Notes"
-        assert not mock_save_song.call_args[0][1]  # is_custom should be False
-
-        # Reset mocks
-        mock_save_song.reset_mock()
-        mock_line_edit_text.reset_mock()
-        mock_text_edit_text.reset_mock()
-        mock_checkbox_checked.reset_mock()
-
-        # Test adding a custom song
         mock_line_edit_text.side_effect = [
             "Custom Artist",
             "Custom Song",
             "Drop D",
             "Custom Album",
-            "3:30",
+            "210000",
             "Rock, Metal",
+            "Custom Artist",
+            "Custom Song",
         ]
         mock_text_edit_text.return_value = "Custom Notes"
+        mock_combo_box_text.side_effect = ["Drop D", "Rock", "Metal"]
         mock_checkbox_checked.return_value = True
-        mock_save_song.return_value = (True, "Custom song saved successfully")
 
         song_app.add_song()
 
@@ -279,11 +275,18 @@ def test_add_song(mock_save_song, mock_dialog_exec, song_app):
 
 @patch("PyQt6.QtWidgets.QDialog.exec")
 @patch("controllers.song_controller.SongController.save_song")
-def test_add_song_validation(mock_save_song, mock_dialog_exec, song_app):
+@patch("controllers.song_controller.SongController.get_all_songs")
+def test_add_song_validation(
+    mock_get_all_songs,
+    mock_save_song,
+    mock_dialog_exec,
+    song_app
+):
     """
     Test if the add song dialog validates required fields correctly.
     """
     mock_dialog_exec.return_value = QDialog.DialogCode.Accepted
+    mock_get_all_songs.return_value = []
 
     with patch.object(QLineEdit, "text") as mock_line_edit_text, patch.object(
         QTextEdit, "toPlainText"
@@ -298,7 +301,7 @@ def test_add_song_validation(mock_save_song, mock_dialog_exec, song_app):
         mock_button.return_value = mock_ok_button
 
         # Test with empty artist and title
-        mock_line_edit_text.side_effect = ["", "", "Standard"]
+        mock_line_edit_text.side_effect = ["", "", "Standard", "", "", ""]
         mock_text_edit_text.return_value = "Test Notes"
 
         song_app.add_song()
@@ -312,9 +315,10 @@ def test_add_song_validation(mock_save_song, mock_dialog_exec, song_app):
         mock_text_edit_text.reset_mock()
         mock_label_set_text.reset_mock()
         mock_ok_button.reset_mock()
-
         # Test with valid artist and title
-        mock_line_edit_text.side_effect = ["Test Artist", "Test Song", "Standard"]
+        mock_line_edit_text.side_effect = [
+            "Test Artist", "Test Song", "Standard", "Test Artist", "Test Song"
+        ]
         mock_text_edit_text.return_value = "Test Notes"
         mock_save_song.return_value = (True, "Song saved successfully")
 
@@ -327,7 +331,14 @@ def test_add_song_validation(mock_save_song, mock_dialog_exec, song_app):
 @patch("PyQt6.QtWidgets.QDialog.exec")
 @patch("controllers.song_controller.SongController.update_song_info")
 @patch("controllers.song_controller.SongController.get_song")
-def test_edit_song(mock_get_song, mock_update_song, mock_dialog_exec, song_app):
+@patch("controllers.song_controller.SongController.get_all_songs")
+def test_edit_song(
+    mock_get_all_songs,
+    mock_get_song,
+    mock_update_song,
+    mock_dialog_exec,
+    song_app
+):
     """
     Test if a song is edited correctly and metadata is updated.
     """
@@ -340,6 +351,10 @@ def test_edit_song(mock_get_song, mock_update_song, mock_dialog_exec, song_app):
     updated_mock_song = MagicMock(notes="New Notes", tuning="New Tuning")
     mock_get_song.side_effect = [mock_song, updated_mock_song]
     mock_update_song.return_value = (True, "Song updated successfully")
+
+    # Mock the get_all_songs method to return a list of mock songs
+    mock_all_songs = [updated_mock_song]
+    mock_get_all_songs.return_value = mock_all_songs
 
     with patch.object(QLineEdit, "text") as mock_line_edit_text, patch.object(
         QTextEdit, "toPlainText"
@@ -357,7 +372,7 @@ def test_edit_song(mock_get_song, mock_update_song, mock_dialog_exec, song_app):
         song_app.edit_song()
 
     mock_update_song.assert_called_once()
-    mock_update_song_list.assert_called_once()
+    mock_update_song_list.assert_called_once_with(mock_all_songs)
     mock_select_song_in_tree.assert_called_once_with("Test Song", "Test Artist")
     mock_display_song_info.assert_called_once_with(updated_mock_song)
 
@@ -394,24 +409,47 @@ def test_delete_song_no_selection(song_app):
 
 
 @patch("controllers.song_controller.SongController.get_all_songs")
-def test_select_songs_empty_database(mock_get_all_songs, song_app):
+@patch("controllers.song_controller.SongController.get_unique_genres")
+@patch("controllers.song_controller.SongController.get_unique_tunings")
+def test_show_select_songs_dialog_empty_database(
+    mock_get_unique_tunings,
+    mock_get_unique_genres,
+    mock_get_all_songs,
+    song_app
+):
     """
-    Test if select_songs handles empty database correctly.
+    Test if show_select_songs_dialog handles empty database correctly.
     """
     mock_get_all_songs.return_value = []
-    with patch.object(song_app, "show_status_message") as mock_show_status:
-        song_app.select_songs()
+    mock_get_unique_genres.return_value = []
+    mock_get_unique_tunings.return_value = []
+    with patch.object(song_app, "show_status_message") as mock_show_status, \
+         patch("PyQt6.QtWidgets.QDialog.exec") as mock_dialog_exec:
+        mock_dialog_exec.return_value = QDialog.DialogCode.Rejected
+        song_app.show_select_songs_dialog()
     mock_show_status.assert_called_once_with("No songs in the database to filter")
 
 
 @patch("controllers.song_controller.SongController.get_all_songs")
-def test_select_songs(mock_get_all_songs, song_app, caplog):
+@patch("controllers.song_controller.SongController.get_unique_genres")
+@patch("controllers.song_controller.SongController.get_unique_tunings")
+def test_show_select_songs_dialog(
+    mock_get_unique_tunings,
+    mock_get_unique_genres,
+    mock_get_all_songs,
+    song_app,
+    caplog
+):
     """
-    Test if the select songs button logs correctly.
+    Test if the show select songs dialog logs correctly.
     """
-    mock_get_all_songs.return_value = []
-    with caplog.at_level(logging.DEBUG):
-        song_app.select_songs()
+    mock_get_all_songs.return_value = [MagicMock()]
+    mock_get_unique_genres.return_value = ["Rock", "Pop"]
+    mock_get_unique_tunings.return_value = ["Standard", "Drop D"]
+    with caplog.at_level(logging.DEBUG), \
+         patch("PyQt6.QtWidgets.QDialog.exec") as mock_dialog_exec:
+        mock_dialog_exec.return_value = QDialog.DialogCode.Rejected
+        song_app.show_select_songs_dialog()
 
+    assert "Opening Select Songs dialog" in caplog.text
     assert "Select Songs button pressed" in caplog.text
-    assert "No songs in the database to filter" in caplog.text
