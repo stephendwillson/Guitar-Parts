@@ -34,7 +34,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='Guitar Parts',
+    name='GuitarParts',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
