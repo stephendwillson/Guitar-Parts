@@ -8,6 +8,10 @@ on:
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
     - name: Create Release
       id: create_release
@@ -22,6 +26,8 @@ jobs:
 
   build-and-release:
     needs: create-release
+    permissions:
+      contents: write
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
