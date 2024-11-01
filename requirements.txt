@@ -2,12 +2,16 @@ altgraph==0.17.4
 certifi==2024.8.30
 cffi==1.17.1
 charset-normalizer==3.4.0
+flake8==7.1.1
 idna==3.10
 iniconfig==2.0.0
 intbitset==4.0.0
+mccabe==0.7.0
 packaging==24.1
 pluggy==1.5.0
+pycodestyle==2.12.1
 pycparser==2.22
+pyflakes==3.2.0
 pyinstaller==6.11.0
 pyinstaller-hooks-contrib==2024.9
 PyQt6==6.7.1
