@@ -3,6 +3,7 @@ Main application module.
 """
 
 import sys
+import os
 import logging
 from titlecase import titlecase
 
@@ -28,7 +29,7 @@ from PyQt6.QtWidgets import (
     QSpinBox,
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QAction
 
 from controllers.song_controller import SongController
 from models.song import Song
@@ -83,6 +84,15 @@ class SongApp(QMainWindow):
         """
         Set up the UI.
         """
+        # Create menu bar
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu('File')
+
+        # Add settings action
+        settings_action = QAction('Settings', self)
+        settings_action.triggered.connect(self.show_settings_dialog)
+        file_menu.addAction(settings_action)
+
         # Song tree
         self.song_tree = QTreeWidget()
         self.song_tree.setColumnCount(4)
@@ -734,6 +744,49 @@ class SongApp(QMainWindow):
             self.show_status_message(f"Filtered to {len(filtered_songs)} songs")
         else:
             logging.debug("Select Songs dialog cancelled")
+
+    def show_settings_dialog(self):
+        """Show settings dialog for API configuration"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Settings")
+        layout = QVBoxLayout(dialog)
+
+        # API Key input
+        api_key_label = QLabel("Last.fm API Key:")
+        api_key_input = QLineEdit()
+        api_key_input.setText(os.getenv('API_KEY', ''))
+        layout.addWidget(api_key_label)
+        layout.addWidget(api_key_input)
+
+        # API Secret input
+        api_secret_label = QLabel("Last.fm API Secret:")
+        api_secret_input = QLineEdit()
+        api_secret_input.setText(os.getenv('API_SECRET', ''))
+        layout.addWidget(api_secret_label)
+        layout.addWidget(api_secret_input)
+
+        # Info label
+        info_label = QLabel("Restart application after changing API credentials")
+        info_label.setStyleSheet("color: gray;")
+        layout.addWidget(info_label)
+
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save |
+            QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        layout.addWidget(button_box)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Update .env file
+            env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+            with open(env_path, 'w') as f:
+                f.write(f"API_KEY={api_key_input.text()}\n")
+                f.write(f"API_SECRET={api_secret_input.text()}\n")
+
+            self.show_status_message(
+                "API settings saved. Please restart the application.")
 
     def load_songs(self):
         """

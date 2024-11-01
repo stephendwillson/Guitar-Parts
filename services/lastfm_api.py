@@ -15,10 +15,11 @@ API_ROOT = "http://ws.audioscrobbler.com/2.0/"
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 
-if not API_KEY or not API_SECRET:
-    raise ValueError("API_KEY and API_SECRET must be set as environment variables.")
-
 setup_logging()
+
+
+def is_api_configured():
+    return bool(API_KEY and API_SECRET)
 
 
 def get_track_info(artist, track):
@@ -32,6 +33,10 @@ def get_track_info(artist, track):
     Returns:
         dict: Dictionary containing track info.
     """
+    if not is_api_configured():
+        logging.warning("Last.fm API is not configured. Skipping track info fetch.")
+        return None
+
     logging.info(f"Fetching track info for: {track} by {artist}")
     method = "track.getInfo"
     artist = artist.replace(" ", "+")

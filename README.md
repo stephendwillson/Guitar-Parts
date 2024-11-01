@@ -79,18 +79,17 @@ pytest --cov=.
 ```
 
 ## Last.fm API Keys
-To use the Last.fm API, you need to obtain your own API keys. Sign up for an account and get your API key and secret from [Last.fm API](https://www.last.fm/api).
+To enable song metadata fetching, you can configure Last.fm API credentials. Sign up for an account and get your API key and secret from [Last.fm API](https://www.last.fm/api).
 
-Set the following environment variables with your API key and secret:
-```
-API_KEY=your_key_here
-API_SECRET=your_secret_here
-```
+You can configure the API credentials through:
+1. File > Settings in the application
+2. Manual environment variable setup:
+   ```sh
+   API_KEY=your_key_here
+   API_SECRET=your_secret_here
+   ```
+3. Create a `.env` file in the root directory of your project and export them there.
 
-You can set these variables manually or by creating a `.env` file in the root directory of your project and exporting them there. Before running or developing, load the environment variables:
-```sh
-source .env
-```
 ## Known Issues
 
 - Last.fm will sometimes prioritize compilations or live albums over the original studio album. For example, a query for Led Zeppelin's "Rain Song" returns the album as "Tour Over Europe 1980". Looking through Last.fm API support forums, this is a known issue and is unlikely to be solved anytime soon.
