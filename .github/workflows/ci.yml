@@ -53,7 +53,7 @@ jobs:
           libx11-xcb-dev
 
         # Mesa and rendering libraries
-        sudo apt-get install -y -qq libgl1-mesa-dev libegl1-mesa \
+        sudo apt-get install -y -qq libgl1 libegl1 \
           libglu1-mesa-dev libxrender-dev
 
         # Other dependencies
