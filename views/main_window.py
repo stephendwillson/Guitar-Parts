@@ -779,14 +779,18 @@ class SongApp(QMainWindow):
         layout.addWidget(button_box)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            # Update .env file
-            env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-            with open(env_path, 'w') as f:
-                f.write(f"API_KEY={api_key_input.text()}\n")
-                f.write(f"API_SECRET={api_secret_input.text()}\n")
-
-            self.show_status_message(
-                "API settings saved. Please restart the application.")
+            try:
+                from utils.utils import save_settings
+                save_settings(api_key_input.text(), api_secret_input.text())
+                self.show_status_message(
+                    "API settings saved. Please restart the application."
+                )
+            except Exception as e:
+                logging.error(f"Failed to save settings: {str(e)}")
+                self.show_status_message(
+                    "Failed to save settings. Please check permissions.",
+                    error=True
+                )
 
     def load_songs(self):
         """

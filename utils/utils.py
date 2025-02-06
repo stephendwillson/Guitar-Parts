@@ -15,17 +15,26 @@ def setup_logging():
     )
 
 
-def get_default_db_path():
-    """
-    Get the default path for the database file.
+def get_app_data_dir():
+    """Get the application data directory following XDG spec"""
+    if sys.platform == "win32":
+        app_data = os.path.join(os.environ.get(
+            "LOCALAPPDATA", os.path.expanduser("~")), "GuitarParts")
+    else:
+        app_data = os.path.join(
+            os.path.expanduser("~"), ".local", "share", "guitar_parts")
+    os.makedirs(app_data, exist_ok=True)
+    return app_data
 
-    Returns:
-        str: The default path to the database file.
-    """
-    home_dir = os.path.expanduser("~")
-    db_dir = os.path.join(home_dir, ".guitar_parts")
-    os.makedirs(db_dir, exist_ok=True)
-    return os.path.join(db_dir, "songs.db")
+
+def get_settings_path():
+    """Get the path to the settings file"""
+    return os.path.join(get_app_data_dir(), "settings.env")
+
+
+def get_default_db_path():
+    """Get the default path for the database file"""
+    return os.path.join(get_app_data_dir(), "songs.db")
 
 
 def get_resource_path(relative_path):
@@ -48,14 +57,8 @@ def get_resource_path(relative_path):
 
 
 def create_cache_directory():
-    """
-    Create the cache directory for album art.
-
-    Returns:
-        str: The path to the cache directory.
-    """
-    db_path = get_default_db_path()
-    cache_dir = os.path.join(os.path.dirname(db_path), "album_art_cache")
+    """Create the cache directory for album art"""
+    cache_dir = os.path.join(get_app_data_dir(), "album_art_cache")
     os.makedirs(cache_dir, exist_ok=True)
     return cache_dir
 
@@ -77,3 +80,17 @@ def get_cached_album_art(album_name, cache_dir):
 
     album_art_path = os.path.join(cache_dir, f"{album_name}.jpg")
     return album_art_path if os.path.exists(album_art_path) else None
+
+
+def save_settings(api_key, api_secret):
+    """
+    Save API settings to the settings file.
+
+    Args:
+        api_key (str): The Last.fm API key
+        api_secret (str): The Last.fm API secret
+    """
+    settings_path = get_settings_path()
+    with open(settings_path, 'w') as f:
+        f.write(f"API_KEY={api_key}\n")
+        f.write(f"API_SECRET={api_secret}\n")

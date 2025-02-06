@@ -171,6 +171,7 @@ bin/
 
 # VSCode
 .vscode/
+GuitarPartsQT.code-workspace
 
 # Linting
 .pylintrc
