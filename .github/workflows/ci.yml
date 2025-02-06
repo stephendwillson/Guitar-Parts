@@ -104,7 +104,7 @@ jobs:
     - name: Build with PyInstaller
       run: pyinstaller guitar_parts.spec
     - name: Upload Linux artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: GuitarParts-Linux
         path: dist/GuitarParts
@@ -126,7 +126,7 @@ jobs:
     - name: Build with PyInstaller
       run: pyinstaller guitar_parts.spec
     - name: Upload Windows artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: GuitarParts-Windows
         path: dist/GuitarParts.exe
