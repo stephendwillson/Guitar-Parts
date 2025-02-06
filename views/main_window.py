@@ -33,7 +33,8 @@ from PyQt6.QtGui import QPixmap, QAction
 
 from controllers.song_controller import SongController
 from models.song import Song
-from utils.utils import setup_logging
+from utils.utils import setup_logging, get_settings_path
+from dotenv import load_dotenv
 
 setup_logging()
 
@@ -52,6 +53,12 @@ class SongApp(QMainWindow):
         self.setWindowTitle("Guitar Parts")
         self.setMinimumSize(800, 600)
         logging.debug("Initializing main window")
+
+        # Load settings
+        settings_path = get_settings_path()
+        if os.path.exists(settings_path):
+            load_dotenv(settings_path)
+            logging.debug(f"Loaded settings from {settings_path}")
 
         # Init controller
         self.controller = SongController()
