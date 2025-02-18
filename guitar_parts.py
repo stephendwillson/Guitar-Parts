@@ -6,6 +6,8 @@ import sys
 from PyQt6.QtWidgets import QApplication
 from views.main_window import SongApp
 
+__version__ = "1.2.0"
+
 
 def main():
     """Run the thing"""

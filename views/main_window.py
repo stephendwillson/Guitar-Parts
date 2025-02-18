@@ -94,11 +94,17 @@ class SongApp(QMainWindow):
         # Create menu bar
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
+        help_menu = menubar.addMenu('Help')
 
         # Add settings action
         settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.show_settings_dialog)
         file_menu.addAction(settings_action)
+
+        # Add about action
+        about_action = QAction('About', self)
+        about_action.triggered.connect(self.show_about_dialog)
+        help_menu.addAction(about_action)
 
         # Song tree
         self.song_tree = QTreeWidget()
@@ -798,6 +804,37 @@ class SongApp(QMainWindow):
                     "Failed to save settings. Please check permissions.",
                     error=True
                 )
+
+    def show_about_dialog(self):
+        """Show about dialog with version info"""
+        from guitar_parts import __version__
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("About Guitar Parts")
+        layout = QVBoxLayout(dialog)
+
+        # Add app info
+        info_text = f"""
+            <h2>Guitar Parts v{__version__}</h2>
+            <p>A tool for tracking guitar parts and learned songs.
+            Uses Last.fm API for song metadata.</p>
+            <p>Released under the MIT License - do whatever you want with it!</p>
+            <p><a href="https://github.com/stephendwillson/Guitar-Parts">
+            View source on GitHub</a></p>
+            <p>© 2024-2025 Stephen Willson</p>
+            """
+
+        info_label = QLabel(info_text)
+        info_label.setOpenExternalLinks(True)
+        info_label.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(info_label)
+
+        # Add OK button
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        button_box.accepted.connect(dialog.accept)
+        layout.addWidget(button_box)
+
+        dialog.exec()
 
     def load_songs(self):
         """
