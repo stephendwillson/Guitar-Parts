@@ -1,17 +1,27 @@
 import os
 import sys
 import logging
+import logging.handlers
 
 
 def setup_logging():
-    """
-    Setup logging configuration.
-    """
-    return logging.basicConfig(
+    """Set up logging configuration with rotation"""
+    log_dir = os.path.join(get_app_data_dir(), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "guitar_parts.log")
+
+    logging.basicConfig(
         level=logging.DEBUG,
-        format="%(asctime)s %(levelname)-4s [%(filename)s:%(lineno)d %(funcName)s] "
-        "%(message)s",
-        datefmt="%Y-%m-%d:%H:%M:%S",
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.handlers.RotatingFileHandler(
+                log_file,
+                maxBytes=1024 * 1024,  # 1MB per file
+                backupCount=3,  # Keep 3 backup files
+                encoding='utf-8'
+            ),
+            logging.StreamHandler()
+        ]
     )
 
 
