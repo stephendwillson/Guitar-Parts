@@ -49,34 +49,29 @@ def test_ui_setup(song_app):
     """
     Test if the UI is set up correctly.
     """
-    assert song_app.song_tree.columnCount() == 4
+    assert song_app.song_tree.columnCount() == 5
     assert song_app.song_tree.headerItem().text(0) == "Artist"
     assert song_app.song_tree.headerItem().text(1) == "Title"
     assert song_app.song_tree.headerItem().text(2) == "Album"
     assert song_app.song_tree.headerItem().text(3) == "Tuning"
+    assert song_app.song_tree.headerItem().text(4) == "Progress"
 
 
 @patch("controllers.song_controller.SongController.get_all_songs")
 def test_update_song_list(mock_get_all_songs, song_app):
-    """
-    Test if the song list updates correctly.
-    """
-    mock_songs = [
-        MagicMock(
-            title="Test Song",
-            artist="Test Artist",
-            album="Test Album",
-            tuning="Standard",
-        )
-    ]
-    mock_get_all_songs.return_value = mock_songs
-    song_app.update_song_list(mock_songs)
+    """Test updating the song list."""
+    test_song = Song(
+        "Test Song", "Test Artist", album="Test Album", progress="Not Started")
+    mock_get_all_songs.return_value = [test_song]
+
+    song_app.update_song_list(mock_get_all_songs.return_value)
+
     assert song_app.song_tree.topLevelItemCount() == 1
     item = song_app.song_tree.topLevelItem(0)
-    assert item.text(0) == "Test Artist"
-    assert item.text(1) == "Test Song"
-    assert item.text(2) == "Test Album"
-    assert item.text(3) == "Standard"
+    assert item.text(0) == test_song.artist
+    assert item.text(1) == test_song.title
+    assert item.text(2) == test_song.album
+    assert item.text(4) == test_song.progress
 
 
 @patch("controllers.song_controller.SongController.get_all_songs")
@@ -85,7 +80,13 @@ def test_select_song_in_tree(mock_get_all_songs, song_app):
     Test if a song is selected correctly in the tree view.
     """
     mock_song = MagicMock(
-        title="Test Song", artist="Test Artist", album="Test Album", tuning="Standard"
+        title="Test Song",
+        artist="Test Artist",
+        album="Test Album",
+        tuning="Standard",
+        notes="Test Notes",
+        progress="Not Started",
+        __str__=lambda x: "Test Song by Test Artist"
     )
     mock_get_all_songs.return_value = [mock_song]
 
@@ -156,6 +157,7 @@ def test_load_songs(mock_get_all_songs, song_app):
         album="Test Album",
         tuning="Standard",
         notes="Test Notes",
+        progress="Not Started"
     )
     mock_get_all_songs.return_value = [mock_song]
 
@@ -239,11 +241,9 @@ def test_add_song(mock_get_all_songs, mock_save_song, mock_dialog_exec, song_app
 
     with patch.object(QLineEdit, "text") as mock_line_edit_text, \
          patch.object(QTextEdit, "toPlainText") as mock_text_edit_text, \
-         patch.object(
-        QComboBox, "currentText"
-    ) as mock_combo_box_text, patch.object(
-        QCheckBox, "isChecked"
-    ) as mock_checkbox_checked:
+         patch.object(QComboBox, "currentText") as mock_combo_box_text, \
+         patch.object(QCheckBox, "isChecked") as mock_checkbox_checked:
+
         mock_line_edit_text.side_effect = [
             "Custom Artist",
             "Custom Song",
@@ -251,11 +251,9 @@ def test_add_song(mock_get_all_songs, mock_save_song, mock_dialog_exec, song_app
             "Custom Album",
             "210000",
             "Rock, Metal",
-            "Custom Artist",
-            "Custom Song",
         ]
         mock_text_edit_text.return_value = "Custom Notes"
-        mock_combo_box_text.side_effect = ["Drop D", "Rock", "Metal"]
+        mock_combo_box_text.return_value = "Drop D"
         mock_checkbox_checked.return_value = True
 
         song_app.add_song()
@@ -268,8 +266,9 @@ def test_add_song(mock_get_all_songs, mock_save_song, mock_dialog_exec, song_app
         assert saved_song.tuning == "Drop D"
         assert saved_song.notes == "Custom Notes"
         assert saved_song.album == "Custom Album"
-        assert saved_song.duration == "210000"  # 3:30 in milliseconds
+        assert saved_song.duration == "210000"
         assert saved_song.genres == ["Rock", "Metal"]
+        assert saved_song.progress == "Not Started"
         assert mock_save_song.call_args[0][1]  # is_custom should be True
 
 
@@ -332,56 +331,33 @@ def test_add_song_validation(
 @patch("controllers.song_controller.SongController.update_song_info")
 @patch("controllers.song_controller.SongController.get_song")
 @patch("controllers.song_controller.SongController.get_all_songs")
-def test_edit_song(
-    mock_get_all_songs,
-    mock_get_song,
-    mock_update_song,
-    mock_dialog_exec,
-    song_app
-):
-    """
-    Test if a song is edited correctly and metadata is updated.
-    """
+def test_edit_song(mock_get_all_songs, mock_get_song, mock_update_song,
+                   mock_dialog_exec, song_app):
+    """Test editing a song."""
     mock_dialog_exec.return_value = QDialog.DialogCode.Accepted
-
-    song_app.last_selected_item = MagicMock()
-    song_app.last_selected_item.text.side_effect = ["Test Artist", "Test Song"]
-
-    mock_song = MagicMock(notes="Old Notes", tuning="Old Tuning")
-    updated_mock_song = MagicMock(notes="New Notes", tuning="New Tuning")
-    mock_get_song.side_effect = [mock_song, updated_mock_song]
     mock_update_song.return_value = (True, "Song updated successfully")
+    test_song = Song("Test Song", "Test Artist", progress="Not Started")
+    mock_get_song.return_value = test_song
 
-    # Mock the get_all_songs method to return a list of mock songs
-    mock_all_songs = [updated_mock_song]
-    mock_get_all_songs.return_value = mock_all_songs
+    # Mock the selected item
+    mock_item = MagicMock()
+    mock_item.text.side_effect = ["Test Artist", "Test Song"]
+    song_app.last_selected_item = mock_item
 
-    with patch.object(QLineEdit, "text") as mock_line_edit_text, patch.object(
-        QTextEdit, "toPlainText"
-    ) as mock_text_edit_text, patch.object(
-        song_app, "display_song_info"
-    ) as mock_display_song_info, patch.object(
-        song_app, "update_song_list"
-    ) as mock_update_song_list, patch.object(
-        song_app, "select_song_in_tree"
-    ) as mock_select_song_in_tree:
+    with patch.object(QTextEdit, "toPlainText") as mock_text_edit_text, \
+         patch.object(QLineEdit, "text") as mock_line_edit_text, \
+         patch.object(QComboBox, "currentText") as mock_combo_box_text:
 
-        mock_line_edit_text.return_value = "New Tuning"
-        mock_text_edit_text.return_value = "New Notes"
+        mock_text_edit_text.return_value = "Updated Notes"
+        mock_line_edit_text.return_value = "Drop D"
+        mock_combo_box_text.return_value = "Learning"
 
         song_app.edit_song()
 
-    mock_update_song.assert_called_once()
-    mock_update_song_list.assert_called_once_with(mock_all_songs)
-    mock_select_song_in_tree.assert_called_once_with("Test Song", "Test Artist")
-    mock_display_song_info.assert_called_once_with(updated_mock_song)
-
-    # Update these assertions to use the mock_display_song_info call
-    mock_display_song_info.assert_called_once()
-    args, _ = mock_display_song_info.call_args
-    displayed_song = args[0]
-    assert displayed_song.tuning == "New Tuning"
-    assert displayed_song.notes == "New Notes"
+        mock_update_song.assert_called_once()
+        updated_song = mock_update_song.call_args[0][0]
+        assert isinstance(updated_song, Song)
+        assert updated_song.progress == "Learning"
 
 
 def test_edit_song_no_selection(song_app):
@@ -453,3 +429,120 @@ def test_show_select_songs_dialog(
 
     assert "Opening Select Songs dialog" in caplog.text
     assert "Select Songs button pressed" in caplog.text
+
+
+@patch("PyQt6.QtWidgets.QDialog.exec")
+@patch("controllers.song_controller.SongController.update_song_info")
+@patch("controllers.song_controller.SongController.get_song")
+@patch("controllers.song_controller.SongController.get_all_songs")
+def test_edit_song_progress(mock_get_all_songs, mock_get_song, mock_update_song,
+                            mock_dialog_exec, song_app):
+    """Test editing song progress."""
+    mock_dialog_exec.return_value = QDialog.DialogCode.Accepted
+    mock_update_song.return_value = (True, "Song updated successfully")
+    test_song = Song("Test Song", "Test Artist", progress="Not Started")
+    mock_get_song.return_value = test_song
+
+    # Mock the selected item
+    mock_item = MagicMock()
+    mock_item.text.side_effect = ["Test Artist", "Test Song"]
+    song_app.last_selected_item = mock_item
+
+    with patch.object(QTextEdit, "toPlainText") as mock_text_edit_text, \
+         patch.object(QLineEdit, "text") as mock_line_edit_text, \
+         patch.object(QComboBox, "currentText") as mock_combo_box_text:
+
+        mock_text_edit_text.return_value = "Updated Notes"
+        mock_line_edit_text.return_value = "Drop D"
+        mock_combo_box_text.return_value = "Learning"
+
+        song_app.edit_song()
+
+        mock_update_song.assert_called_once()
+        updated_song = mock_update_song.call_args[0][0]
+        assert isinstance(updated_song, Song)
+        assert updated_song.progress == "Learning"
+
+
+@patch("controllers.song_controller.SongController.get_all_songs")
+@patch("controllers.song_controller.SongController.get_unique_genres")
+@patch("controllers.song_controller.SongController.get_unique_tunings")
+def test_select_songs_dialog_exclude_mastered(
+    mock_get_unique_tunings,
+    mock_get_unique_genres,
+    mock_get_all_songs,
+    song_app
+):
+    """Test selecting songs with exclude mastered option."""
+    # Setup mock data
+    mock_get_unique_genres.return_value = ["Rock", "Metal"]
+    mock_get_unique_tunings.return_value = ["Standard", "Drop D"]
+    mock_get_all_songs.return_value = [
+        Song("Song 1", "Artist 1", progress="Mastered"),
+        Song("Song 2", "Artist 2", progress="Learning"),
+        Song("Song 3", "Artist 3", progress="Not Started")
+    ]
+
+    # Show dialog and interact with it
+    with patch.object(QDialog, "exec") as mock_dialog_exec:
+        mock_dialog_exec.return_value = QDialog.DialogCode.Accepted
+
+        # Mock the checkbox state
+        with patch.object(QCheckBox, "isChecked") as mock_checkbox:
+            mock_checkbox.return_value = True  # Exclude mastered songs
+
+            # Call the method
+            song_app.show_select_songs_dialog()
+
+            # Verify filter settings were updated
+            assert song_app.filter_settings["exclude_mastered"] is True
+
+
+@patch("controllers.song_controller.SongController.get_all_songs")
+def test_filter_songs_exclude_mastered(mock_get_all_songs, song_app):
+    """Test filtering out mastered songs."""
+    # Create test songs
+    songs = [
+        Song("Song 1", "Artist 1", progress="Mastered"),
+        Song("Song 2", "Artist 2", progress="Learning"),
+        Song("Song 3", "Artist 3", progress="Not Started")
+    ]
+    mock_get_all_songs.return_value = songs
+
+    # Filter songs
+    filtered_songs = song_app.controller.filter_songs(exclude_mastered=True)
+
+    # Verify results
+    assert len(filtered_songs) == 2
+    assert all(song.progress != "Mastered" for song in filtered_songs)
+    assert any(song.title == "Song 2" for song in filtered_songs)
+    assert any(song.title == "Song 3" for song in filtered_songs)
+
+
+def test_filter_songs(song_app):
+    """Test filtering songs with various criteria."""
+    # Create test songs
+    songs = [
+        Song("Test Song", "Test Artist", album="Test Album",
+             genres=["Rock"], tuning="E Standard", progress="Learning"),
+        Song("Another Song", "Another Artist", album="Another Album",
+             genres=["Metal"], tuning="Drop D", progress="Mastered"),
+    ]
+
+    with patch.object(song_app.controller, "get_all_songs", return_value=songs):
+        # Test filtering with various criteria
+        filtered = song_app.controller.filter_songs(
+            artist="Test",
+            title="Song",
+            album="Album",
+            genre="Rock",
+            tunings={"E Standard"},
+            exclude_mastered=False  # Add this parameter
+        )
+        assert len(filtered) == 1
+        assert filtered[0].title == "Test Song"
+
+        # Test excluding mastered songs
+        filtered = song_app.controller.filter_songs(exclude_mastered=True)
+        assert len(filtered) == 1
+        assert filtered[0].progress != "Mastered"

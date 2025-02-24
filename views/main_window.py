@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import (
     QGroupBox,
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap, QAction
+from PyQt6.QtGui import QPixmap, QAction, QColor, QBrush
 
 from controllers.song_controller import SongController
 from models.song import Song
@@ -44,6 +44,13 @@ class SongApp(QMainWindow):
     """
     Main app class.
     """
+
+    # Add progress colors as class constants
+    PROGRESS_COLORS = {
+        "Not Started": QColor("#808080"),  # Gray
+        "Learning": QColor("#FFA500"),     # Orange
+        "Mastered": QColor("#32CD32"),     # Green
+    }
 
     def __init__(self):
         """
@@ -107,10 +114,28 @@ class SongApp(QMainWindow):
         about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
 
+        # Add legend above song tree
+        legend_widget = QWidget()
+        legend_layout = QHBoxLayout(legend_widget)
+        legend_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+        for status, color in self.PROGRESS_COLORS.items():
+            color_box = QLabel()
+            color_box.setFixedSize(16, 16)
+            color_box.setStyleSheet(
+                f"background-color: {color.name()}; border: 1px solid black"
+            )
+            legend_layout.addWidget(color_box)
+            legend_layout.addWidget(QLabel(status))
+            legend_layout.addSpacing(10)
+        self.main_layout.addWidget(legend_widget)
+
         # Song tree
         self.song_tree = QTreeWidget()
-        self.song_tree.setColumnCount(4)
-        self.song_tree.setHeaderLabels(["Artist", "Title", "Album", "Tuning"])
+        self.song_tree.setColumnCount(5)  # Add one for progress
+        self.song_tree.setHeaderLabels(
+            ["Artist", "Title", "Album", "Tuning", "Progress"]
+        )
         self.song_tree.itemClicked.connect(self.on_treeview_click)
         self.song_tree.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
         self.main_layout.addWidget(self.song_tree)
@@ -253,9 +278,18 @@ class SongApp(QMainWindow):
         """
         self.song_tree.clear()
         for song in songs:
-            item = QTreeWidgetItem(
-                [titlecase(song.artist), titlecase(song.title), song.album, song.tuning]
-            )
+            item = QTreeWidgetItem(self.song_tree)
+            # Apply titlecase when displaying, handle None values
+            item.setText(0, titlecase(song.artist) if song.artist else "")
+            item.setText(1, titlecase(song.title) if song.title else "")
+            item.setText(2, titlecase(song.album) if song.album else "")
+            item.setText(3, song.tuning if song.tuning else "")
+            item.setText(4, song.progress if song.progress else "Not Started")
+
+            # Set color based on progress
+            if song.progress in self.PROGRESS_COLORS:
+                color = self.PROGRESS_COLORS[song.progress]
+                item.setBackground(4, QBrush(color))
             self.song_tree.addTopLevelItem(item)
         self.song_tree.sortItems(0, Qt.SortOrder.AscendingOrder)
 
@@ -276,11 +310,10 @@ class SongApp(QMainWindow):
             duration_str = "Unknown"
 
         self.duration_label.setText(f"Duration: {duration_str}")
-
-        self.genres_label.setText(
-            f"Genres: {', '.join(song.genres) if song.genres else 'N/A'}"
-        )
-        self.tuning_label.setText(f"Tuning: {song.tuning}")
+        genres_str = ', '.join(
+            titlecase(genre) for genre in song.genres) if song.genres else 'N/A'
+        self.genres_label.setText(f"Genres: {genres_str}")
+        self.tuning_label.setText(f"Tuning: {titlecase(song.tuning)}")
         self.notes_label.setText(f"Notes: {song.notes}")
 
         logging.debug(
@@ -290,8 +323,9 @@ class SongApp(QMainWindow):
             song.artist,
             song.album,
             duration_str,
-            ", ".join(song.genres) if song.genres else "N/A",
-            song.tuning,
+            ", ".join(
+                titlecase(genre) for genre in song.genres) if song.genres else "N/A",
+            titlecase(song.tuning),
             song.notes,
         )
 
@@ -515,8 +549,14 @@ class SongApp(QMainWindow):
         Save or update a song in the database.
         """
         logging.debug(
-            f"Saving {'custom ' if is_custom else ''}song: {title} by {artist}"
-        )
+            f"Saving {'custom ' if is_custom else ''}song: {title} by {artist}")
+
+        # Properly capitalize title and artist before saving
+        artist = titlecase(artist)
+        title = titlecase(title)
+        if album:
+            album = titlecase(album)
+
         # Check if the song already exists
         existing_song = self.controller.get_song(title, artist)
 
@@ -540,6 +580,7 @@ class SongApp(QMainWindow):
                 album=album,
                 duration=duration,
                 genres=genres,
+                progress="Not Started"
             )
 
             # Save the new song, which will fetch track info if needed
@@ -550,7 +591,6 @@ class SongApp(QMainWindow):
             self.update_song_list(self.controller.get_all_songs())
         else:
             if "Check your spelling" in message:
-                # Show a more prominent message for songs not found on Last.FM
                 QMessageBox.warning(self, "Song Not Found", message)
             else:
                 self.show_status_message(message, error=True)
@@ -581,6 +621,14 @@ class SongApp(QMainWindow):
                 tuning_input.setText(song.tuning)
                 layout.addWidget(tuning_input)
 
+                # Add progress dropdown
+                progress_label = QLabel("Progress:")
+                progress_combo = QComboBox()
+                progress_combo.addItems(Song.PROGRESS_STATES)
+                progress_combo.setCurrentText(song.progress)
+                layout.addWidget(progress_label)
+                layout.addWidget(progress_combo)
+
                 button_box = QDialogButtonBox(
                     QDialogButtonBox.StandardButton.Ok
                     | QDialogButtonBox.StandardButton.Cancel
@@ -592,6 +640,7 @@ class SongApp(QMainWindow):
                 if dialog.exec() == QDialog.DialogCode.Accepted:
                     song.notes = notes_input.toPlainText()
                     song.tuning = tuning_input.text()
+                    song.progress = progress_combo.currentText()
                     success, message = self.controller.update_song_info(song)
                     if success:
                         self.show_status_message(message)
@@ -655,6 +704,11 @@ class SongApp(QMainWindow):
             input_fields[field].setText(self.filter_settings[field])
             layout.addWidget(QLabel(f"{field.capitalize()}:"))
             layout.addWidget(input_fields[field])
+
+        # Add exclude mastered checkbox
+        exclude_mastered = QCheckBox("Exclude Mastered Songs")
+        exclude_mastered.setChecked(self.filter_settings.get('exclude_mastered', False))
+        layout.addWidget(exclude_mastered)
 
         # Create dropdown fields
         dropdown_fields = {}
@@ -760,7 +814,8 @@ class SongApp(QMainWindow):
                 'genre': dropdown_fields['genre'].currentText(),
                 'tunings': {cb.text() for cb in self.tuning_checkboxes
                             if cb.isChecked()},
-                'num_songs': num_songs_input.value()
+                'num_songs': num_songs_input.value(),
+                'exclude_mastered': exclude_mastered.isChecked()
             }
             filtered_songs = self.controller.filter_songs(
                 artist=self.filter_settings['artist'],
@@ -768,7 +823,8 @@ class SongApp(QMainWindow):
                 album=self.filter_settings['album'],
                 genre=self.filter_settings['genre'],
                 tunings=self.filter_settings['tunings'],
-                num_songs=self.filter_settings['num_songs']
+                num_songs=self.filter_settings['num_songs'],
+                exclude_mastered=self.filter_settings['exclude_mastered']
             )
             self.update_song_list(filtered_songs)
             self.show_status_message(f"Filtered to {len(filtered_songs)} songs")

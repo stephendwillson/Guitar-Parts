@@ -39,16 +39,42 @@ def add_schema_version_table(cursor):
     cursor.execute("INSERT OR IGNORE INTO schema_version (id, version) VALUES (1, 1)")
 
 
+def add_progress_column(cursor):
+    """Migration 2: Add progress column to songs table"""
+    try:
+        # First try to add column to existing table
+        cursor.execute("""
+            ALTER TABLE songs ADD COLUMN progress TEXT DEFAULT 'Not Started'
+        """)
+    except sqlite3.OperationalError:
+        # If table doesn't exist, create it with all columns
+        cursor.execute("""
+            CREATE TABLE songs (
+                title TEXT NOT NULL,
+                artist TEXT NOT NULL,
+                tuning TEXT,
+                notes TEXT,
+                album TEXT,
+                duration TEXT,
+                genres TEXT,
+                progress TEXT DEFAULT 'Not Started',
+                PRIMARY KEY (title, artist)
+            )
+        """)
+
+
 def migrate_database(cursor):
     """
     Handle all database migrations in order.
     Each migration should be idempotent.
     """
     current_version = get_current_schema_version(cursor)
+    logging.info(f"Current database version: {current_version}")
 
     # List of migrations to apply
     migrations = [
         add_schema_version_table,
+        add_progress_column,
         # Future migrations will be added here
     ]
 
@@ -67,23 +93,19 @@ def migrate_database(cursor):
                 raise
 
 
-def initialize_db(db_file=None, schema_file="db/schema.sql"):
-    """
-    Initialize database and handle migrations.
-    """
-    if db_file is None:
-        db_file = get_default_db_path()
+def initialize_db(db_path=None, schema_path=None):
+    """Initialize the database with the given schema"""
+    if db_path is None:
+        db_path = get_default_db_path()
+    if schema_path is None:
+        schema_path = get_resource_path("db/schema.sql")
 
-    conn = sqlite3.connect(db_file)
+    logging.info(f"Initializing database at {db_path}")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Create initial schema if database is new
-    schema_path = get_resource_path(schema_file)
-    with open(schema_path, "r", encoding="utf-8") as f:
-        schema = f.read()
-    cursor.executescript(schema)
-
-    # Run any pending migrations
+    # Run migrations
+    logging.info("Running database migrations")
     migrate_database(cursor)
 
     return conn, cursor

@@ -6,7 +6,6 @@ caching and interactions with the Last.FM API.
 
 import os
 import logging
-import random
 
 from services.db import (
     initialize_db,
@@ -31,7 +30,10 @@ class SongController:
         Args:
             db_path (str): The path to the database.
         """
-        self.conn, self.cursor = initialize_db()
+        self.conn, self.cursor = initialize_db(
+            db_path=get_default_db_path(),
+            schema_path=get_resource_path("db/schema.sql")
+        )
         self.cache_dir = create_cache_directory()
 
     def song_exists(self, title, artist):
@@ -286,26 +288,33 @@ class SongController:
                 search_text in song.title.lower() or
                 search_text in song.artist.lower()]
 
-    def filter_songs(self, artist='', title='', album='', genre='', tunings=None,
-                     num_songs=0):
-        """Filter songs based on given criteria"""
-        songs = self.get_all_songs()
-        filtered_songs = []
+    def filter_songs(self, artist="", title="", album="", genre="", tunings=None,
+                     num_songs=None, exclude_mastered=False):
+        """Filter songs based on given criteria."""
+        filtered_songs = self.get_all_songs()
+        if artist:
+            filtered_songs = [
+                s for s in filtered_songs
+                if artist.lower() in s.artist.lower()
+            ]
+        if title:
+            filtered_songs = [
+                s for s in filtered_songs
+                if title.lower() in s.title.lower()
+            ]
+        if album:
+            filtered_songs = [
+                s for s in filtered_songs
+                if album.lower() in (s.album or "").lower()
+            ]
+        if genre:
+            filtered_songs = [s for s in filtered_songs if genre in (s.genres or [])]
+        if tunings:
+            filtered_songs = [s for s in filtered_songs if s.tuning in tunings]
+        if exclude_mastered:
+            filtered_songs = [s for s in filtered_songs if s.progress != "Mastered"]
 
-        for song in songs:
-            if (
-                (not artist or artist.lower() in song.artist.lower()) and
-                (not title or title.lower() in song.title.lower()) and
-                (not album or album.lower() in song.album.lower()) and
-                (not genre or genre in song.genres) and
-                (not tunings or song.tuning in tunings)
-            ):
-                filtered_songs.append(song)
-
-        if num_songs > 0:
-            filtered_songs = random.sample(
-                filtered_songs,
-                min(num_songs, len(filtered_songs))
-            )
+        if num_songs and len(filtered_songs) > num_songs:
+            filtered_songs = filtered_songs[:num_songs]
 
         return filtered_songs
