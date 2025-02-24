@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QComboBox,
     QSpinBox,
+    QGroupBox,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QAction
@@ -80,7 +81,7 @@ class SongApp(QMainWindow):
             'title': '',
             'album': '',
             'genre': '',
-            'tuning': '',
+            'tunings': set(),
             'num_songs': 0
         }
 
@@ -666,13 +667,28 @@ class SongApp(QMainWindow):
         layout.addWidget(QLabel("Genre:"))
         layout.addWidget(dropdown_fields['genre'])
 
-        # Tuning dropdown
-        dropdown_fields['tuning'] = QComboBox()
-        dropdown_fields['tuning'].addItem("")  # Empty option
-        dropdown_fields['tuning'].addItems(self.controller.get_unique_tunings())
-        dropdown_fields['tuning'].setCurrentText(self.filter_settings['tuning'])
-        layout.addWidget(QLabel("Tuning:"))
-        layout.addWidget(dropdown_fields['tuning'])
+        # Tuning selection list
+        tuning_group = QGroupBox("Tunings")
+        tuning_layout = QVBoxLayout()
+        tuning_scroll = QScrollArea()
+        tuning_widget = QWidget()
+        tuning_list_layout = QVBoxLayout(tuning_widget)
+
+        # Create checkboxes for each tuning
+        self.tuning_checkboxes = []
+        unique_tunings = self.controller.get_unique_tunings()
+        for tuning in unique_tunings:
+            checkbox = QCheckBox(tuning)
+            if tuning in self.filter_settings['tunings']:
+                checkbox.setChecked(True)
+            self.tuning_checkboxes.append(checkbox)
+            tuning_list_layout.addWidget(checkbox)
+
+        tuning_scroll.setWidget(tuning_widget)
+        tuning_scroll.setWidgetResizable(True)
+        tuning_layout.addWidget(tuning_scroll)
+        tuning_group.setLayout(tuning_layout)
+        layout.addWidget(tuning_group)
 
         # Number of songs input
         num_songs_label = QLabel("Number of songs (0 for all):")
@@ -742,7 +758,8 @@ class SongApp(QMainWindow):
                 'title': input_fields['title'].text(),
                 'album': input_fields['album'].text(),
                 'genre': dropdown_fields['genre'].currentText(),
-                'tuning': dropdown_fields['tuning'].currentText(),
+                'tunings': {cb.text() for cb in self.tuning_checkboxes
+                            if cb.isChecked()},
                 'num_songs': num_songs_input.value()
             }
             filtered_songs = self.controller.filter_songs(
@@ -750,7 +767,7 @@ class SongApp(QMainWindow):
                 title=self.filter_settings['title'],
                 album=self.filter_settings['album'],
                 genre=self.filter_settings['genre'],
-                tuning=self.filter_settings['tuning'],
+                tunings=self.filter_settings['tunings'],
                 num_songs=self.filter_settings['num_songs']
             )
             self.update_song_list(filtered_songs)

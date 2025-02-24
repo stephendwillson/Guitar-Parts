@@ -286,40 +286,26 @@ class SongController:
                 search_text in song.title.lower() or
                 search_text in song.artist.lower()]
 
-    def filter_songs(self, artist=None, title=None, album=None, genre=None, tuning=None,
-                     num_songs=None):
-        """
-        Filter songs based on the given criteria and randomly select if num_songs is
-        specified.
-
-        Args:
-            artist (str): Artist name to filter by.
-            title (str): Song title to filter by.
-            album (str): Album name to filter by.
-            genre (str): Genre to filter by.
-            tuning (str): Tuning to filter by.
-            num_songs (int): Number of songs to randomly select from the filtered list.
-
-        Returns:
-            list: A list of Song objects matching the criteria.
-        """
+    def filter_songs(self, artist='', title='', album='', genre='', tunings=None,
+                     num_songs=0):
+        """Filter songs based on given criteria"""
         songs = self.get_all_songs()
+        filtered_songs = []
 
-        if artist:
-            songs = [song for song in songs if artist.lower() in song.artist.lower()]
-        if title:
-            songs = [song for song in songs if title.lower() in song.title.lower()]
-        if album:
-            songs = [song for song in songs if album.lower() in song.album.lower()]
-        if genre:
-            songs = [
-                song for song in songs
-                if genre.lower() in [g.lower() for g in song.genres]
-            ]
-        if tuning:
-            songs = [song for song in songs if tuning.lower() == song.tuning.lower()]
+        for song in songs:
+            if (
+                (not artist or artist.lower() in song.artist.lower()) and
+                (not title or title.lower() in song.title.lower()) and
+                (not album or album.lower() in song.album.lower()) and
+                (not genre or genre in song.genres) and
+                (not tunings or song.tuning in tunings)
+            ):
+                filtered_songs.append(song)
 
-        if num_songs and num_songs < len(songs):
-            return random.sample(songs, num_songs)
-        else:
-            return songs
+        if num_songs > 0:
+            filtered_songs = random.sample(
+                filtered_songs,
+                min(num_songs, len(filtered_songs))
+            )
+
+        return filtered_songs
