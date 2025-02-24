@@ -10,16 +10,66 @@ from utils.utils import get_default_db_path, get_resource_path, setup_logging
 setup_logging()
 
 
+def get_current_schema_version(cursor):
+    """Get the current database schema version"""
+    try:
+        cursor.execute("SELECT version FROM schema_version")
+        return cursor.fetchone()[0]
+    except sqlite3.OperationalError:
+        # Table doesn't exist - this is a new or pre-versioning database
+        return 0
+
+
+def set_schema_version(cursor, version):
+    """Update the schema version in the database"""
+    cursor.execute("INSERT OR REPLACE INTO schema_version (id, version) VALUES (1, ?)",
+                   (version,))
+    cursor.connection.commit()
+
+
+def add_schema_version_table(cursor):
+    """Migration 1: Add schema version tracking"""
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS schema_version (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            version INTEGER NOT NULL
+        )
+    """)
+    # Initialize with version 1 if table is empty
+    cursor.execute("INSERT OR IGNORE INTO schema_version (id, version) VALUES (1, 1)")
+
+
+def migrate_database(cursor):
+    """
+    Handle all database migrations in order.
+    Each migration should be idempotent.
+    """
+    current_version = get_current_schema_version(cursor)
+
+    # List of migrations to apply
+    migrations = [
+        add_schema_version_table,
+        # Future migrations will be added here
+    ]
+
+    # Apply any migrations that haven't been run yet
+    for version, migration in enumerate(migrations, start=1):
+        if current_version < version:
+            logging.info(f"Applying migration {version}: {migration.__name__}")
+            try:
+                migration(cursor)
+                set_schema_version(cursor, version)
+                cursor.connection.commit()
+                logging.info(f"Migration {version} completed successfully")
+            except Exception as e:
+                cursor.connection.rollback()
+                logging.error(f"Migration {version} failed: {str(e)}")
+                raise
+
+
 def initialize_db(db_file=None, schema_file="db/schema.sql"):
     """
-    Init database.
-
-    Args:
-        db_file (str): Path to the database file.
-        schema_file (str): Path to the schema file.
-
-    Returns:
-        tuple: Tuple containing the database connection and cursor.
+    Initialize database and handle migrations.
     """
     if db_file is None:
         db_file = get_default_db_path()
@@ -27,12 +77,15 @@ def initialize_db(db_file=None, schema_file="db/schema.sql"):
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
 
+    # Create initial schema if database is new
     schema_path = get_resource_path(schema_file)
     with open(schema_path, "r", encoding="utf-8") as f:
         schema = f.read()
-
     cursor.executescript(schema)
-    conn.commit()
+
+    # Run any pending migrations
+    migrate_database(cursor)
+
     return conn, cursor
 
 
