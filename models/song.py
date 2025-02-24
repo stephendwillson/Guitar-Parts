@@ -8,6 +8,8 @@ class Song:
     Class to represent a song.
     """
 
+    PROGRESS_STATES = ["Not Started", "Learning", "Mastered"]
+
     def __init__(
         self,
         title,
@@ -17,6 +19,7 @@ class Song:
         album=None,
         duration=None,
         genres="",
+        progress="Not Started",
     ):
         """
         Initialize a Song object.
@@ -29,6 +32,8 @@ class Song:
             album (str, optional): The album of the song.
             duration (str, optional): The duration of the song.
             genres (list, optional): The genres of the song.
+            progress (str, optional): Learning progress of the song.
+                                    One of: "Not Started", "Learning", "Mastered"
         """
         self.title = title
         self.artist = artist
@@ -37,6 +42,9 @@ class Song:
         self.album = album
         self.duration = duration
         self.genres = genres if genres is not None else []
+        if progress not in self.PROGRESS_STATES:
+            progress = "Not Started"
+        self.progress = progress
 
     def __repr__(self):
         """
@@ -48,5 +56,5 @@ class Song:
         return (
             f"Song(title={self.title}, artist={self.artist}, tuning={self.tuning}, "
             f"notes={self.notes}, album={self.album}, duration={self.duration}, "
-            f"genres={self.genres})"
+            f"genres={self.genres}, progress={self.progress})"
         )
