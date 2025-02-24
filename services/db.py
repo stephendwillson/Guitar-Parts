@@ -103,8 +103,8 @@ def get_song(cursor, title, artist):
     """
     logging.debug("Fetching song: %s by %s", title, artist)
     cursor.execute(
-        "SELECT title, artist, tuning, notes, album, duration, genres FROM songs "
-        "WHERE LOWER(title) = LOWER(?) AND LOWER(artist) = LOWER(?)",
+        "SELECT title, artist, tuning, notes, album, duration, genres, progress "
+        "FROM songs WHERE LOWER(title) = LOWER(?) AND LOWER(artist) = LOWER(?)",
         (title.lower(), artist.lower()),
     )
     row = cursor.fetchone()
@@ -118,6 +118,7 @@ def get_song(cursor, title, artist):
             album=row[4],
             duration=row[5],
             genres=row[6].split(", "),  # Convert genres back to a list
+            progress=row[7],
         )
     logging.debug("Song not found: %s by %s", title, artist)
     return None
@@ -132,8 +133,8 @@ def save_song(cursor, song):
         song (Song): The song object to save.
     """
     cursor.execute(
-        "INSERT INTO songs (title, artist, tuning, notes, album, duration, genres) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO songs (title, artist, tuning, notes, album, duration, "
+        "genres, progress) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             song.title.lower(),
             song.artist.lower(),
@@ -142,6 +143,7 @@ def save_song(cursor, song):
             song.album,
             song.duration,
             ", ".join(song.genres),  # Convert genres to a comma-separated string
+            song.progress,
         ),
     )
     cursor.connection.commit()
@@ -158,7 +160,8 @@ def load_songs(cursor):
         list of Song: List of Song objects.
     """
     cursor.execute(
-        "SELECT title, artist, tuning, notes, album, duration, genres FROM songs"
+        "SELECT title, artist, tuning, notes, album, duration, genres, progress "
+        "FROM songs"
     )
     rows = cursor.fetchall()
     return [
@@ -170,6 +173,7 @@ def load_songs(cursor):
             album=row[4],
             duration=row[5],
             genres=row[6].split(", "),  # Convert genres back to a list
+            progress=row[7],
         )
         for row in rows
     ]
@@ -201,7 +205,7 @@ def update_song_info(cursor, song):
     """
     query = """
     UPDATE songs
-    SET notes = ?, tuning = ?, album = ?, duration = ?, genres = ?
+    SET notes = ?, tuning = ?, album = ?, duration = ?, genres = ?, progress = ?
     WHERE LOWER(artist) = LOWER(?) AND LOWER(title) = LOWER(?)
     """
     cursor.execute(
@@ -212,6 +216,7 @@ def update_song_info(cursor, song):
             song.album,
             song.duration,
             ", ".join(song.genres),  # Convert genres to a comma-separated string
+            song.progress,
             song.artist.lower(),
             song.title.lower(),
         ),
