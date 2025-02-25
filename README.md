@@ -4,51 +4,20 @@
 
 Developed for personal use but might be useful to others with the same problem.
 
-I play guitar and try to learn as many songs as I can but I often forget which songs I've learned or which parts of songs I've learned. This is meant to be a place where I can store the songs I've learned and leave a note on which parts I've learned, the song structure, the chord progressions, or anything that might help me remember the part. The goal is to be able to randomly pick a few tracks to practice to keep fingers and brain fresh.
+I play guitar and try to learn as many songs as I can but I often forget which songs I've learned or which parts of songs I've learned. This is meant to be a place where I can store the songs I've learned and leave a note on which parts I've learned, the song structure, the chord progressions, or anything that might help me remember the part. The goal is to be able to randomly pick a few tracks to practice to keep fingers and brain fresh. There's also some useful statistics to help contextualize the practice.
 
 The app uses the Last.fm API to fetch song details based on the title and artist. You can add custom songs, but most metadata fields will be empty.
 
-## Getting Started
+## Quick Start
+Download the release for your platform from the [Releases](https://github.com/stephendwillson/Guitar-Parts/releases) page.
+
+## Development
 
 ### Requirements
 
 **Note**: This application has been tested on Fedora Linux. It should work on other Linux distros and platforms but these platforms have not been explicitly tested.
 
-#### Python
-Ensure Python (3.6 or higher) is installed. It can be downloaded from [python.org](https://www.python.org/downloads/).
-
-### Installation
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/stephendwillson/Guitar-Parts.git
-   cd guitar-parts
-   ```
-
-2. Install the required packages:
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-3. Set the required environment variables:
-   ```sh
-   cp .env.example .env
-   # Edit .env to include your Last.fm API key
-   # Change syntax as needed per platform
-
-   source .env
-   ```
-See [Last.fm API Key](#lastfm-api-keys) for details on obtaining a Last.FM API key.
-
-### Running Application
-```sh
-python guitar_parts.py
-```
-
-## Development
-
-### Setting up Development Environment
-
-#### Virtual Environment
+#### (Optional) Virtual Environment
 It's recommended to use a virtual environment for dependency management. From project root directory:
 ```sh
 # Create virtual environment
@@ -58,9 +27,19 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
+#### Python
+Ensure [Python](https://www.python.org/downloads/) (3.6 or higher) is installed.
+
+See [Last.fm API Key](#lastfm-api-keys) for details on obtaining a Last.FM API key.
+
 #### Python modules
 ```sh
 pip install -r requirements.txt
+```
+
+### Running Application
+```sh
+python guitar_parts.py
 ```
 
 ### Running Tests
@@ -81,14 +60,14 @@ pytest --cov=.
 ## Last.fm API Keys
 To enable song metadata fetching, you can configure Last.fm API credentials. Sign up for an account and get your API key and secret from [Last.fm API](https://www.last.fm/api).
 
-You can configure the API credentials through:
-1. File > Settings in the application
-2. Manual environment variable setup:
+You can configure the API credentials through any of the following:
+* File > Settings in the application
+* Manual environment variable setup:
    ```sh
    API_KEY=your_key_here
    API_SECRET=your_secret_here
    ```
-3. Create a `.env` file in the root directory of your project and export them there.
+* Create a `.env` file in the root directory of your project and export them there.
 
 ## Known Issues
 
