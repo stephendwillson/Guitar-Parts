@@ -54,8 +54,8 @@
             </div>
         </aside>
         <h2>
-            <span class="text">268 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">268<span class="text"> run</span></button>
+            <span class="text">275 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">275<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_a44f0ac069e85531_test_song_controller_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.6.4">coverage.py v7.6.4</a>,
-            created at 2025-02-24 18:18 +0000
+            created at 2025-02-25 19:15 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -628,6 +628,19 @@
     <p class="run"><span class="n"><a id="t546" href="#t546">546</a></span><span class="t">        <span class="nam">filtered</span> <span class="op">=</span> <span class="nam">song_app</span><span class="op">.</span><span class="nam">controller</span><span class="op">.</span><span class="nam">filter_songs</span><span class="op">(</span><span class="nam">exclude_mastered</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t547" href="#t547">547</a></span><span class="t">        <span class="key">assert</span> <span class="nam">len</span><span class="op">(</span><span class="nam">filtered</span><span class="op">)</span> <span class="op">==</span> <span class="num">1</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t548" href="#t548">548</a></span><span class="t">        <span class="key">assert</span> <span class="nam">filtered</span><span class="op">[</span><span class="num">0</span><span class="op">]</span><span class="op">.</span><span class="nam">progress</span> <span class="op">!=</span> <span class="str">"Mastered"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t549" href="#t549">549</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t550" href="#t550">550</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t551" href="#t551">551</a></span><span class="t"><span class="op">@</span><span class="nam">patch</span><span class="op">(</span><span class="str">"controllers.song_controller.SongController.get_all_songs"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t552" href="#t552">552</a></span><span class="t"><span class="key">def</span> <span class="nam">test_show_statistics_dialog</span><span class="op">(</span><span class="nam">mock_get_all_songs</span><span class="op">,</span> <span class="nam">song_app</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t553" href="#t553">553</a></span><span class="t">    <span class="str">"""Test that statistics dialog can be opened from main window."""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t554" href="#t554">554</a></span><span class="t">    <span class="nam">mock_get_all_songs</span><span class="op">.</span><span class="nam">return_value</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t555" href="#t555">555</a></span><span class="t">        <span class="nam">Song</span><span class="op">(</span><span class="str">"Test Song"</span><span class="op">,</span> <span class="str">"Test Artist"</span><span class="op">,</span> <span class="nam">progress</span><span class="op">=</span><span class="str">"Learning"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t556" href="#t556">556</a></span><span class="t">    <span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t557" href="#t557">557</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t558" href="#t558">558</a></span><span class="t">    <span class="key">with</span> <span class="nam">patch</span><span class="op">(</span><span class="str">"PyQt6.QtWidgets.QDialog.exec"</span><span class="op">)</span> <span class="key">as</span> <span class="nam">mock_dialog_exec</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t559" href="#t559">559</a></span><span class="t">        <span class="nam">mock_dialog_exec</span><span class="op">.</span><span class="nam">return_value</span> <span class="op">=</span> <span class="nam">QDialog</span><span class="op">.</span><span class="nam">DialogCode</span><span class="op">.</span><span class="nam">Accepted</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t560" href="#t560">560</a></span><span class="t">        <span class="nam">song_app</span><span class="op">.</span><span class="nam">show_statistics_dialog</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t561" href="#t561">561</a></span><span class="t">        <span class="nam">mock_dialog_exec</span><span class="op">.</span><span class="nam">assert_called_once</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -637,7 +650,7 @@
             <a class="nav" href="z_a44f0ac069e85531_test_song_controller_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.6.4">coverage.py v7.6.4</a>,
-            created at 2025-02-24 18:18 +0000
+            created at 2025-02-25 19:15 +0000
         </p>
     </div>
 </footer>

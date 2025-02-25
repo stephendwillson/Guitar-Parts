@@ -2,20 +2,22 @@
 
 [Full report](https://htmlpreview.github.io/?https://github.com/stephendwillson/Guitar-Parts/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
-| Name                            |    Stmts |     Miss |   Cover |   Missing |
-|-------------------------------- | -------: | -------: | ------: | --------: |
-| controllers/song\_controller.py |      121 |       24 |     80% |131-134, 150-153, 169-173, 191, 201, 213, 219-222, 241, 268, 274, 286-287, 318 |
-| models/song.py                  |       15 |        2 |     87% |    46, 56 |
-| services/db.py                  |       94 |       23 |     76% |90-93, 99, 101, 273-288, 295-305 |
-| services/lastfm\_api.py         |       59 |        8 |     86% |37-38, 60-62, 123-125 |
-| tests/conftest.py               |       10 |        3 |     70% |     14-16 |
-| tests/test\_db.py               |       51 |        0 |    100% |           |
-| tests/test\_lastfm\_api.py      |       55 |        0 |    100% |           |
-| tests/test\_main\_window.py     |      268 |        0 |    100% |           |
-| tests/test\_song\_controller.py |       91 |        0 |    100% |           |
-| utils/utils.py                  |       40 |       10 |     75% |31, 87-92, 103-106 |
-| views/main\_window.py           |      531 |      119 |     78% |68-69, 236-253, 307-308, 335-337, 369, 388, 392-396, 461-468, 474-478, 513-516, 521-522, 569-571, 593-596, 652-655, 679-685, 737, 776-782, 790, 793, 795, 836-876, 883-910, 925-930, 934-937 |
-|                       **TOTAL** | **1335** |  **189** | **86%** |           |
+| Name                              |    Stmts |     Miss |   Cover |   Missing |
+|---------------------------------- | -------: | -------: | ------: | --------: |
+| controllers/song\_controller.py   |      150 |       27 |     82% |131-134, 150-153, 169-173, 191, 201, 213, 219-222, 241, 268, 274, 286-287, 318, 357, 368-369 |
+| models/song.py                    |       15 |        2 |     87% |    46, 56 |
+| services/db.py                    |       94 |       23 |     76% |90-93, 99, 101, 273-288, 295-305 |
+| services/lastfm\_api.py           |       59 |        8 |     86% |37-38, 60-62, 123-125 |
+| tests/conftest.py                 |       10 |        3 |     70% |     14-16 |
+| tests/test\_db.py                 |       51 |        0 |    100% |           |
+| tests/test\_lastfm\_api.py        |       55 |        0 |    100% |           |
+| tests/test\_main\_window.py       |      275 |        0 |    100% |           |
+| tests/test\_song\_controller.py   |       91 |        0 |    100% |           |
+| tests/test\_statistics\_dialog.py |       78 |        0 |    100% |           |
+| utils/utils.py                    |       40 |       10 |     75% |31, 87-92, 103-106 |
+| views/main\_window.py             |      539 |      119 |     78% |68-69, 242-259, 313-314, 341-343, 375, 394, 398-402, 467-474, 480-484, 519-522, 527-528, 575-577, 599-602, 658-661, 685-691, 743, 782-788, 796, 799, 801, 842-882, 889-916, 931-936, 946-949 |
+| views/statistics\_dialog.py       |      126 |       17 |     87% |124-126, 132, 156-168 |
+|                         **TOTAL** | **1583** |  **209** | **87%** |           |
 
 
 ## Setup coverage badge
