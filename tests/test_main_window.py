@@ -546,3 +546,16 @@ def test_filter_songs(song_app):
         filtered = song_app.controller.filter_songs(exclude_mastered=True)
         assert len(filtered) == 1
         assert filtered[0].progress != "Mastered"
+
+
+@patch("controllers.song_controller.SongController.get_all_songs")
+def test_show_statistics_dialog(mock_get_all_songs, song_app):
+    """Test that statistics dialog can be opened from main window."""
+    mock_get_all_songs.return_value = [
+        Song("Test Song", "Test Artist", progress="Learning")
+    ]
+
+    with patch("PyQt6.QtWidgets.QDialog.exec") as mock_dialog_exec:
+        mock_dialog_exec.return_value = QDialog.DialogCode.Accepted
+        song_app.show_statistics_dialog()
+        mock_dialog_exec.assert_called_once()
