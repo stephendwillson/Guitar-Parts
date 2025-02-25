@@ -102,12 +102,18 @@ class SongApp(QMainWindow):
         # Create menu bar
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
+        view_menu = menubar.addMenu('View')
         help_menu = menubar.addMenu('Help')
 
         # Add settings action
         settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.show_settings_dialog)
         file_menu.addAction(settings_action)
+
+        # Add statistics action
+        statistics_action = QAction('Statistics', self)
+        statistics_action.triggered.connect(self.show_statistics_dialog)
+        view_menu.addAction(statistics_action)
 
         # Add about action
         about_action = QAction('About', self)
@@ -928,6 +934,12 @@ class SongApp(QMainWindow):
             songs = self.controller.get_all_songs()
 
         self.update_song_list(songs)
+
+    def show_statistics_dialog(self):
+        """Show the statistics dialog"""
+        from views.statistics_dialog import StatisticsDialog
+        dialog = StatisticsDialog(self.controller, self)
+        dialog.exec()
 
 
 if __name__ == "__main__":

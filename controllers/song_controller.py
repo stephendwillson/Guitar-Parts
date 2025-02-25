@@ -318,3 +318,54 @@ class SongController:
             filtered_songs = filtered_songs[:num_songs]
 
         return filtered_songs
+
+    def get_progress_stats(self):
+        """Get statistics about song progress"""
+        songs = self.get_all_songs()
+        stats = {"Not Started": 0, "Learning": 0, "Mastered": 0}
+
+        for song in songs:
+            if song.progress in stats:
+                stats[song.progress] += 1
+
+        return stats
+
+    def get_progress_history(self):
+        """Get history of song progress changes"""
+        songs = self.get_all_songs()
+
+        # Group songs by progress state
+        progress_counts = {
+            "Not Started": 0,
+            "Learning": 0,
+            "Mastered": 0
+        }
+
+        for song in songs:
+            if song.progress in progress_counts:
+                progress_counts[song.progress] += 1
+
+        return progress_counts
+
+    def get_tuning_stats(self):
+        """Get statistics about tuning usage"""
+        songs = self.get_all_songs()
+        tuning_stats = {}
+
+        for song in songs:
+            if song.tuning:
+                tuning_stats[song.tuning] = tuning_stats.get(song.tuning, 0) + 1
+
+        return dict(sorted(tuning_stats.items(), key=lambda x: x[1], reverse=True))
+
+    def get_genre_stats(self):
+        """Get statistics about genre usage"""
+        songs = self.get_all_songs()
+        genre_stats = {}
+
+        for song in songs:
+            if song.genres:
+                for genre in song.genres:
+                    genre_stats[genre] = genre_stats.get(genre, 0) + 1
+
+        return dict(sorted(genre_stats.items(), key=lambda x: x[1], reverse=True))
