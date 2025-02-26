@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QSpinBox,
     QGroupBox,
+    QMenu,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QAction, QColor, QBrush
@@ -143,6 +144,8 @@ class SongApp(QMainWindow):
             ["Artist", "Title", "Album", "Tuning", "Progress"]
         )
         self.song_tree.itemClicked.connect(self.on_treeview_click)
+        self.song_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.song_tree.customContextMenuRequested.connect(self.show_context_menu)
         self.song_tree.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
         self.main_layout.addWidget(self.song_tree)
 
@@ -940,6 +943,15 @@ class SongApp(QMainWindow):
         from views.statistics_dialog import StatisticsDialog
         dialog = StatisticsDialog(self.controller, self)
         dialog.exec()
+
+    def show_context_menu(self, position):
+        """Show context menu for song tree items."""
+        item = self.song_tree.itemAt(position)
+        if item:
+            menu = QMenu()
+            edit_action = menu.addAction("Edit Song")
+            edit_action.triggered.connect(self.edit_song)
+            menu.exec(self.song_tree.viewport().mapToGlobal(position))
 
 
 if __name__ == "__main__":
