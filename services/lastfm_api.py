@@ -7,19 +7,24 @@ import requests
 import os
 import logging
 from dotenv import load_dotenv
-from utils.utils import setup_logging
-
-load_dotenv()
+from utils.utils import setup_logging, get_settings_path
 
 API_ROOT = "http://ws.audioscrobbler.com/2.0/"
-API_KEY = os.getenv("API_KEY")
-API_SECRET = os.getenv("API_SECRET")
 
 setup_logging()
 
 
+def load_api_credentials():
+    """Load API credentials from settings file"""
+    settings_path = get_settings_path()
+    if os.path.exists(settings_path):
+        load_dotenv(settings_path)
+    return os.getenv("API_KEY"), os.getenv("API_SECRET")
+
+
 def is_api_configured():
-    return bool(API_KEY and API_SECRET)
+    api_key, api_secret = load_api_credentials()
+    return bool(api_key and api_secret)
 
 
 def get_track_info(artist, track):
@@ -37,11 +42,12 @@ def get_track_info(artist, track):
         logging.warning("Last.fm API is not configured. Skipping track info fetch.")
         return None
 
+    api_key, _ = load_api_credentials()
     logging.info(f"Fetching track info for: {track} by {artist}")
     method = "track.getInfo"
     artist = artist.replace(" ", "+")
     track = track.replace(" ", "+")
-    api_key_str = "&api_key=" + API_KEY
+    api_key_str = "&api_key=" + api_key
     method_call = f"{API_ROOT}?method={method}"
     track_info_query = f"&artist={artist}&track={track}"
     call = f"{method_call}{track_info_query}{api_key_str}&format=json"
